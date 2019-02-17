@@ -9,8 +9,8 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 find_package(Eigen3 REQUIRED)
 
 # Library
-add_library(unscented INTERFACE)
-target_include_directories(unscented INTERFACE include impl ${EIGEN3_INCLUDE_DIR})
+add_library(unscented SHARED src/unscented.cpp)
+target_include_directories(unscented PUBLIC include impl ${EIGEN3_INCLUDE_DIR})
 
 # Examples
 # add_executable(robot_2d examples/robot_2d.cpp)
