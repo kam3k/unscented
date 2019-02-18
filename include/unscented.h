@@ -30,6 +30,14 @@ namespace unscented
 
     using SigmaWeights = std::array<SCALAR, NUM_SIGMA_POINTS>;
 
+    using MeasurementSigmaPoints = std::array<MEAS, NUM_SIGMA_POINTS>;
+
+    using StateMeanFunction =
+        std::function<STATE(const SigmaPoints&, const SigmaWeights&)>;
+
+    using MeasurementMeanFunction =
+        std::function<MEAS(const MeasurementSigmaPoints&, const SigmaWeights&)>;
+
     UKF();
 
     template <typename... PARAMS>
@@ -74,6 +82,8 @@ namespace unscented
 
     const M_by_M& getMeasurementCovariance() const;
 
+    const MEAS& getExpectedMeasurement() const;
+
     const M_by_M& getExpectedMeasurementCovariance() const;
 
     const M_by_N& getCrossCovariance() const;
@@ -90,12 +100,24 @@ namespace unscented
 
     const SigmaWeights& getCovarianceSigmaWeights() const;
 
+    void setStateMeanFunction(StateMeanFunction state_mean_function);
+
+    const StateMeanFunction& getStateMeanFunction() const;
+
+    void setMeasurementMeanFunction(MeasurementMeanFunction meas_mean_function);
+
+    const MeasurementMeanFunction& getMeasurementMeanFunction() const;
+
   private:
     void calculateWeights();
+
+    void generateSigmaPoints();
 
     STATE x_;
 
     MEAS y_;
+
+    MEAS y_hat_;
 
     N_by_N P_;
 
@@ -126,5 +148,11 @@ namespace unscented
     SCALAR lambda_;
 
     SCALAR eta_;
+
+    StateMeanFunction state_mean_function_;
+
+    MeasurementMeanFunction meas_mean_function_;
+
+    Eigen::LLT<N_by_N> cholesky;
   };
 } // namespace unscented

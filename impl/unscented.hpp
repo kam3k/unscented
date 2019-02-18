@@ -1,6 +1,7 @@
 #include "unscented.h"
 
 #include <cassert>
+#include <numeric>
 
 namespace unscented
 {
@@ -8,18 +9,35 @@ namespace unscented
             std::size_t MEAS_DOF, typename SCALAR>
   UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::UKF()
   {
-    calculateWeights();
     P_ = N_by_N::Identity();
     Q_ = N_by_N::Identity();
     R_ = M_by_M::Identity();
+
+    calculateWeights();
+
+    // Default state mean function is simply the weighted average of all states
+    state_mean_function_ = [this](const SigmaPoints& states,
+                                  const SigmaWeights& weights) {
+      STATE weighted_state = states[0] * weights[0];
+      return std::inner_product(states.begin() + 1, states.end(),
+                                weights.begin() + 1, weighted_state);
+    };
+
+    // Default meas mean function is simply the weighted average of all
+    // measurements
+    meas_mean_function_ = [this](const MeasurementSigmaPoints& measurements,
+                                 const SigmaWeights& weights) {
+      MEAS weighted_meas = measurements[0] * weights[0];
+      return std::inner_product(measurements.begin() + 1, measurements.end(),
+                                weights.begin() + 1, weighted_meas);
+    };
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
   template <typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::predict(
-      const std::function<void(STATE&, PARAMS...)>& /*system_model*/,
-      PARAMS...)
+      const std::function<void(STATE&, PARAMS...)>& /*system_model*/, PARAMS...)
   {
   }
 
@@ -162,6 +180,14 @@ namespace unscented
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
+  const MEAS&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getExpectedMeasurement() const
+  {
+    return y_hat_;
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
   const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::M_by_M&
   UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
       SCALAR>::getExpectedMeasurementCovariance() const
@@ -231,6 +257,42 @@ namespace unscented
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setStateMeanFunction(
+      StateMeanFunction state_mean_function)
+  {
+    state_mean_function_ = std::move(state_mean_function);
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
+                     SCALAR>::StateMeanFunction&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getStateMeanFunction() const
+  {
+    return state_mean_function_;
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
+  void
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setMeasurementMeanFunction(
+      MeasurementMeanFunction meas_mean_function)
+  {
+    meas_mean_function_ = std::move(meas_mean_function);
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
+                     SCALAR>::MeasurementMeanFunction&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeasurementMeanFunction()
+      const
+  {
+    return meas_mean_function_;
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::calculateWeights()
   {
     lambda_ = alpha_ * alpha_ * (N + kappa_) - N;
@@ -250,6 +312,28 @@ namespace unscented
     {
       sigma_weights_mean_[i] = w_i;
       sigma_weights_cov_[i] = w_i;
+    }
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::generateSigmaPoints()
+  {
+    // Calculate the (weighted) matrix square root of the state covariance matrix
+    cholesky.compute(P_);
+    const N_by_N& sqrt_P = eta_ * cholesky.matrixL().toDenseMatrix();
+
+    // First sigma point is the current state mean
+    sigma_points_[0] = x_;
+
+    // Next N sigma points are the current state mean perturbed by the columns
+    // of sqrt_P, and the N sigma points after that are the same perturbations
+    // but subtracted
+    for (std::size_t i = 0; i < N; ++i)
+    {
+      STATE perturb(sqrt_P.col(i));
+      sigma_points_[i + 1] = x_ + STATE(sqrt_P.col(i));
+      sigma_points_[N + i + 1] = x_ + STATE(-sqrt_P.col(i));
     }
   }
 } // namespace unscented
