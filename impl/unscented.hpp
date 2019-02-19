@@ -37,26 +37,86 @@ namespace unscented
             std::size_t MEAS_DOF, typename SCALAR>
   template <typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::predict(
-      const std::function<void(STATE&, PARAMS...)>& /*system_model*/, PARAMS...)
+      const std::function<void(STATE&, PARAMS...)>& system_model, PARAMS... params)
   {
+    generateSigmaPoints();
+
+    // Transform each sigma point through the system model
+    for (std::size_t i = 0; i < N; ++i)
+    {
+      system_model(sigma_points_[i], params...);
+    }
+
+    // The (a priori) state is the weighted mean of the transformed sigma points
+    x_ = state_mean_function_(sigma_points_, sigma_weights_mean_);
+    
+    // Calculate the state covariance
+    P_ = Q_ +
+         std::inner_product(sigma_points_.begin(), sigma_points_.end(),
+                            sigma_weights_cov_.begin(), N_by_N::Zero(),
+                            std::plus<N_by_N>(),
+                            [this](const STATE& state, const SCALAR& weight) {
+                              const N_by_1 diff = state - x_;
+                              return diff * diff.transpose() * weight;
+                            });
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
   template <typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::correct(
-      const std::function<MEAS(const STATE&, PARAMS...)>& /*meas_model*/,
-      PARAMS...)
+      const std::function<MEAS(const STATE&, PARAMS...)>& meas_model,
+      PARAMS... params)
   {
+    generateSigmaPoints();
+
+    // Transform each sigma point through the measurement model
+    for (std::size_t i = 0; i < N; ++i)
+    {
+      meas_sigma_points_[i] = meas_model(sigma_points_[i], params...);
+    }
+
+    // The expected measurement is the weighted mean of the measurement sigma
+    // points
+    y_hat_ = meas_mean_function_(meas_sigma_points_, sigma_weights_mean_);
+
+    // Calculate the expected measurement covariance
+    Pyy_ = R_ + std::inner_product(
+                   meas_sigma_points_.begin(), meas_sigma_points_.end(),
+                   sigma_weights_cov_.begin(), M_by_M::Zero(),
+                   std::plus<N_by_N>(),
+                   [this](const MEAS& meas, const SCALAR& weight) {
+                     const M_by_1 diff = meas - y_hat_;
+                     return diff * diff.transpose() * weight;
+                   });
+
+    // Calculate the cross covariance between the state and expected measurement
+    // (would love to have Python's zip(...) functionality here)
+    Pxy_ = N_by_M::Zero();
+    for (std::size_t i = 0; i < N; ++i)
+    {
+      Pxy_ += sigma_weights_cov_[i] * (sigma_points_[i] - x_) *
+              (meas_sigma_points_[i] - y_hat_).transpose();
+    }
+
+    // Calculate the Kalman gain and innovation
+    K_ = Pxy_ * Pyy_.inverse();
+    innovation_ = y_ - y_hat_;
+
+    // Update the state mean and covariance
+    x_ += K_ * innovation_;
+    P_ -= K_ * Pyy_ * K_.transpose();
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
   template <typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::correct(
-      const std::function<MEAS(const STATE&, PARAMS...)>& /*meas_model*/,
-      MEAS /*meas*/, PARAMS...)
+      const std::function<MEAS(const STATE&, PARAMS...)>& meas_model, MEAS meas,
+      PARAMS... params)
   {
+    setMeasurement(std::move(meas));
+    correct(meas_model, params...);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
@@ -192,12 +252,12 @@ namespace unscented
   UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
       SCALAR>::getExpectedMeasurementCovariance() const
   {
-    return Py_;
+    return Pyy_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::M_by_N&
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::N_by_M&
   UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getCrossCovariance() const
   {
     return Pxy_;
@@ -205,7 +265,7 @@ namespace unscented
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::M_by_N&
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::N_by_M&
   UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getKalmanGain() const
   {
     return K_;
@@ -225,6 +285,16 @@ namespace unscented
   UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getSigmaPoints() const
   {
     return sigma_points_;
+  }
+
+  template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+            std::size_t MEAS_DOF, typename SCALAR>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
+                     SCALAR>::MeasurementSigmaPoints&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeasurementSigmaPoints()
+      const
+  {
+    return meas_sigma_points_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
@@ -328,7 +398,7 @@ namespace unscented
 
     // Next N sigma points are the current state mean perturbed by the columns
     // of sqrt_P, and the N sigma points after that are the same perturbations
-    // but subtracted
+    // but negated
     for (std::size_t i = 0; i < N; ++i)
     {
       STATE perturb(sqrt_P.col(i));

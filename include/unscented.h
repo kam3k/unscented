@@ -24,7 +24,7 @@ namespace unscented
 
     using M_by_M = Eigen::Matrix<SCALAR, M, M>;
 
-    using M_by_N = Eigen::Matrix<SCALAR, N, M>;
+    using N_by_M = Eigen::Matrix<SCALAR, N, M>;
 
     using SigmaPoints = std::array<STATE, NUM_SIGMA_POINTS>;
 
@@ -86,13 +86,15 @@ namespace unscented
 
     const M_by_M& getExpectedMeasurementCovariance() const;
 
-    const M_by_N& getCrossCovariance() const;
+    const N_by_M& getCrossCovariance() const;
 
-    const M_by_N& getKalmanGain() const;
+    const N_by_M& getKalmanGain() const;
 
     const M_by_1& getInnovation() const;
 
     const SigmaPoints& getSigmaPoints() const;
+
+    const MeasurementSigmaPoints& getMeasurementSigmaPoints() const;
 
     void setWeightCoefficients(SCALAR alpha, SCALAR beta, SCALAR kappa);
 
@@ -125,15 +127,17 @@ namespace unscented
 
     M_by_M R_;
 
-    M_by_M Py_;
+    M_by_M Pyy_;
 
-    M_by_N Pxy_;
+    N_by_M Pxy_;
 
-    M_by_N K_;
+    N_by_M K_;
 
     M_by_1 innovation_;
 
     SigmaPoints sigma_points_;
+
+    MeasurementSigmaPoints meas_sigma_points_;
 
     SigmaWeights sigma_weights_mean_;
 
