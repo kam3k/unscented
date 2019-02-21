@@ -16,6 +16,10 @@ namespace unscented
 
     static constexpr auto M = MEAS_DOF;
 
+    using State = STATE;
+
+    using Measurement = MEAS;
+
     using N_by_1 = Eigen::Matrix<SCALAR, N, 1>;
 
     using N_by_N = Eigen::Matrix<SCALAR, N, N>;
@@ -32,6 +36,12 @@ namespace unscented
 
     using MeasurementSigmaPoints = std::array<MEAS, NUM_SIGMA_POINTS>;
 
+    template <typename... PARAMS>
+    using SystemModel = std::function<void(STATE&, PARAMS...)>;
+
+    template <typename... PARAMS>
+    using MeasurementModel = std::function<MEAS(const STATE&, PARAMS...)>;
+
     using StateMeanFunction =
         std::function<STATE(const SigmaPoints&, const SigmaWeights&)>;
 
@@ -41,16 +51,14 @@ namespace unscented
     UKF();
 
     template <typename... PARAMS>
-    void predict(const std::function<void(STATE&, PARAMS...)>& system_model,
-                 PARAMS...);
+    void predict(const SystemModel<PARAMS...>& system_model, PARAMS...);
 
     template <typename... PARAMS>
-    void correct(const std::function<MEAS(const STATE&, PARAMS...)>& meas_model,
-                 PARAMS...);
+    void correct(const MeasurementModel<PARAMS...>& meas_model, PARAMS...);
 
     template <typename... PARAMS>
-    void correct(const std::function<MEAS(const STATE&, PARAMS...)>& meas_model,
-                 MEAS meas, PARAMS...);
+    void correct(const MeasurementModel<PARAMS...>& meas_model, MEAS meas,
+                 PARAMS...);
 
     void setState(const STATE& state);
 

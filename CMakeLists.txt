@@ -9,14 +9,12 @@ set(CMAKE_CXX_FLAGS "-std=c++11")
 find_package(Eigen3 REQUIRED)
 
 # Library
-add_library(unscented SHARED src/unscented.cpp)
+add_library(unscented src/instantiations.cpp)
 target_include_directories(unscented PUBLIC include impl ${EIGEN3_INCLUDE_DIR})
 
 # Examples
-# add_executable(robot_2d examples/robot_2d.cpp)
-# target_link_libraries(robot_2d unscented)
-# add_executable(robot_3d examples/robot_3d.cpp)
-# target_link_libraries(robot_3d unscented)
+add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
+target_link_libraries(robot_localization_2d unscented)
 
 # Install
 install(TARGETS unscented DESTINATION bin)

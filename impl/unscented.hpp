@@ -17,7 +17,8 @@ namespace unscented
 
     // Default state mean function is simply the weighted average of all states
     state_mean_function_ = [this](const SigmaPoints& states,
-                                  const SigmaWeights& weights) {
+                                  const SigmaWeights& weights) 
+    {
       STATE weighted_state = states[0] * weights[0];
       return std::inner_product(states.begin() + 1, states.end(),
                                 weights.begin() + 1, weighted_state);
@@ -26,7 +27,8 @@ namespace unscented
     // Default meas mean function is simply the weighted average of all
     // measurements
     meas_mean_function_ = [this](const MeasurementSigmaPoints& measurements,
-                                 const SigmaWeights& weights) {
+                                 const SigmaWeights& weights) 
+    {
       MEAS weighted_meas = measurements[0] * weights[0];
       return std::inner_product(measurements.begin() + 1, measurements.end(),
                                 weights.begin() + 1, weighted_meas);
@@ -55,7 +57,8 @@ namespace unscented
          std::inner_product(sigma_points_.begin(), sigma_points_.end(),
                             sigma_weights_cov_.begin(), N_by_N::Zero(),
                             std::plus<N_by_N>(),
-                            [this](const STATE& state, const SCALAR& weight) {
+                            [this](const STATE& state, const SCALAR& weight) 
+                            {
                               const N_by_1 diff = state - x_;
                               return diff * diff.transpose() * weight;
                             });
@@ -85,7 +88,8 @@ namespace unscented
                    meas_sigma_points_.begin(), meas_sigma_points_.end(),
                    sigma_weights_cov_.begin(), M_by_M::Zero(),
                    std::plus<N_by_N>(),
-                   [this](const MEAS& meas, const SCALAR& weight) {
+                   [this](const MEAS& meas, const SCALAR& weight) 
+                   {
                      const M_by_1 diff = meas - y_hat_;
                      return diff * diff.transpose() * weight;
                    });
@@ -401,9 +405,9 @@ namespace unscented
     // but negated
     for (std::size_t i = 0; i < N; ++i)
     {
-      STATE perturb(sqrt_P.col(i));
-      sigma_points_[i + 1] = x_ + STATE(sqrt_P.col(i));
-      sigma_points_[N + i + 1] = x_ + STATE(-sqrt_P.col(i));
+      const N_by_1& perturb = sqrt_P.col(i);
+      sigma_points_[i + 1] = x_ + STATE(perturb);
+      sigma_points_[N + i + 1] = x_ + STATE(-perturb);
     }
   }
 } // namespace unscented
