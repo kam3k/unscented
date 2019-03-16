@@ -37,9 +37,9 @@ namespace unscented
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
-  template <typename... PARAMS>
+  template <typename SYS_MODEL, typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::predict(
-      const std::function<void(STATE&, PARAMS...)>& system_model, PARAMS... params)
+      const SYS_MODEL& system_model, PARAMS... params)
   {
     generateSigmaPoints();
 
@@ -55,7 +55,7 @@ namespace unscented
     // Calculate the state covariance
     P_ = Q_ +
          std::inner_product(sigma_points_.begin(), sigma_points_.end(),
-                            sigma_weights_cov_.begin(), N_by_N::Zero(),
+                            sigma_weights_cov_.begin(), N_by_N(N_by_N::Zero()),
                             std::plus<N_by_N>(),
                             [this](const STATE& state, const SCALAR& weight) 
                             {
@@ -66,10 +66,9 @@ namespace unscented
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
-  template <typename... PARAMS>
+  template <typename MEAS_MODEL, typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::correct(
-      const std::function<MEAS(const STATE&, PARAMS...)>& meas_model,
-      PARAMS... params)
+      const MEAS_MODEL& meas_model, PARAMS... params)
   {
     generateSigmaPoints();
 
@@ -86,8 +85,8 @@ namespace unscented
     // Calculate the expected measurement covariance
     Pyy_ = R_ + std::inner_product(
                    meas_sigma_points_.begin(), meas_sigma_points_.end(),
-                   sigma_weights_cov_.begin(), M_by_M::Zero(),
-                   std::plus<N_by_N>(),
+                   sigma_weights_cov_.begin(), M_by_M(M_by_M::Zero()),
+                   std::plus<M_by_M>(),
                    [this](const MEAS& meas, const SCALAR& weight) 
                    {
                      const M_by_1 diff = meas - y_hat_;
@@ -108,16 +107,15 @@ namespace unscented
     innovation_ = y_ - y_hat_;
 
     // Update the state mean and covariance
-    x_ += K_ * innovation_;
+    x_ = x_ + STATE(K_ * innovation_);
     P_ -= K_ * Pyy_ * K_.transpose();
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
             std::size_t MEAS_DOF, typename SCALAR>
-  template <typename... PARAMS>
+  template <typename MEAS_MODEL, typename... PARAMS>
   void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::correct(
-      const std::function<MEAS(const STATE&, PARAMS...)>& meas_model, MEAS meas,
-      PARAMS... params)
+      const MEAS_MODEL& meas_model, MEAS meas, PARAMS... params)
   {
     setMeasurement(std::move(meas));
     correct(meas_model, params...);

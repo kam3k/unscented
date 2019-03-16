@@ -1,5 +1,8 @@
 #include "unscented.hpp"
 
+#include <random>
+#include <iostream>
+
 float wrapAngle(float angle)
 {
   angle = fmod(angle + M_PI, 2 * M_PI);
@@ -42,6 +45,12 @@ Eigen::Vector3f operator-(const RobotState& rhs, const RobotState& lhs)
 RobotState operator*(const RobotState& state, float scale)
 {
   return RobotState(state.x * scale, state.y * scale, state.theta * scale);
+}
+
+std::ostream& operator<<(std::ostream& os, const RobotState& state)
+{
+  os << "(" << state.x << ", " << state.y << ", " << state.theta << ")";
+  return os;
 }
 
 struct RobotMeasurement
@@ -95,7 +104,7 @@ int main()
   using UKF = unscented::UKF<RobotState, 3, RobotMeasurement, 2>;
 
   // Setup the simulation
-  const auto SIM_DURATION = 30.0f; // total simulation duration
+  const auto SIM_DURATION = 5.0f; // total simulation duration
   const auto T = 0.02f; // time between prediction steps (i.e., input period)
   const auto MEAS_PERIOD = 0.1f; // time between measurements
   const std::size_t NUM_LANDMARKS = 4; // total number of landmarks
@@ -104,9 +113,21 @@ int main()
       {2.0f, 0.5f},
       {2.5f, 3.5f},
       {4.0f, 2.0f}}}; // positions of landmarks
-  const auto VEL_VAR = 0.01f;
-  const auto ANG_VEL_VAR = 0.005f;
+  const auto VEL_STD_DEV = 0.1f;
+  const auto ANG_VEL_STD_DEV = 0.071f;
   UKF::State state_true(1.0f, 1.0f, 0.0f);
+
+  // Function to simulate a range/bearing measurement given the current robot
+  // state and a landmark
+  auto simulate_measurement = [](const RobotState& state,
+                                 const Eigen::Vector2f& landmark) {
+    const auto range = std::sqrt(std::pow(landmark.x() - state.x, 2.0f) +
+                                 std::pow(landmark.y() - state.y, 2.0f));
+    const auto bearing =
+        wrapAngle(std::atan2(landmark.y() - state.y, landmark.x() - state.x) -
+                  state.theta);
+    return RobotMeasurement(range, bearing);
+  };
 
   // Setup the UKF (initial state, state covariance, system covariance,
   // measurement covariance)
@@ -128,26 +149,55 @@ int main()
        0.000, 0.007;
   ukf.setMeasurementCovariance(R);
 
+  // Setup random number generation
+  std::random_device rd{};
+  std::mt19937 gen{rd()};
+  std::normal_distribution<float> vel_noise(0.0f, VEL_STD_DEV);
+  std::normal_distribution<float> ang_vel_noise(0.0f, ANG_VEL_STD_DEV);
+  std::normal_distribution<float> range_noise(0.0f, std::sqrt(R(0, 0)));
+  std::normal_distribution<float> bearing_noise(0.0f, std::sqrt(R(1, 1)));
+
   // Run the simulation
   float sim_time = 0.0f;
   float last_meas_time = 0.0f;
   while (sim_time < SIM_DURATION)
   {
-    // Get the simulated inputs
-
-    // Predict the estimated state forward in time
+    // Get the simulated (true) inputs
+    const auto velocity = 0.5f;
+    const auto angular_velocity = 0.01f;
 
     // Move the true state forward in time
+    systemModel(state_true, velocity, angular_velocity, T);
+
+    // Get the noisy inputs by perturbing the true inputs
+    const auto velocity_noisy = velocity + vel_noise(gen);
+    const auto angular_velocity_noisy = angular_velocity + ang_vel_noise(gen);
+
+    // Predict the estimated state forward in time
+    ukf.predict(systemModel, velocity_noisy, angular_velocity_noisy, T);
+    std::cout << state_true << " " << ukf.getState() << " \n";
 
     // Check if it is time for a measurent
     if (sim_time - last_meas_time >= MEAS_PERIOD)
     {
-      // Get the simulated measurement
+      for (const auto& landmark : LANDMARKS)
+      {
+        // Get the simulated (true) measurement
+        const auto& measurement = simulate_measurement(state_true, landmark);
 
-      // Correct the estimated state
+        // Get the noisy measurement by perturbing the true measurement
+        RobotMeasurement measurement_noisy(
+            measurement.range + range_noise(gen),
+            measurement.bearing + bearing_noise(gen));
+
+        // Correct the estimated state
+        ukf.correct(measurementModel, measurement_noisy, landmark);
+      }
 
       last_meas_time = sim_time;
     }
+
+    // Move the simulation time forward
     sim_time += T;
   }
 }

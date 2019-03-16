@@ -1,5 +1,4 @@
-#include <Eigen/Cholesky>
-#include <Eigen/Core>
+#include <Eigen/Dense>
 
 #include <array>
 
@@ -32,15 +31,9 @@ namespace unscented
 
     using SigmaPoints = std::array<STATE, NUM_SIGMA_POINTS>;
 
-    using SigmaWeights = std::array<SCALAR, NUM_SIGMA_POINTS>;
+    using SigmaWeights = std::array<double, NUM_SIGMA_POINTS>;
 
     using MeasurementSigmaPoints = std::array<MEAS, NUM_SIGMA_POINTS>;
-
-    template <typename... PARAMS>
-    using SystemModel = std::function<void(STATE&, PARAMS...)>;
-
-    template <typename... PARAMS>
-    using MeasurementModel = std::function<MEAS(const STATE&, PARAMS...)>;
 
     using StateMeanFunction =
         std::function<STATE(const SigmaPoints&, const SigmaWeights&)>;
@@ -50,15 +43,14 @@ namespace unscented
 
     UKF();
 
-    template <typename... PARAMS>
-    void predict(const SystemModel<PARAMS...>& system_model, PARAMS...);
+    template <typename SYS_MODEL, typename... PARAMS>
+    void predict(const SYS_MODEL& system_model, PARAMS...);
 
-    template <typename... PARAMS>
-    void correct(const MeasurementModel<PARAMS...>& meas_model, PARAMS...);
+    template <typename MEAS_MODEL, typename... PARAMS>
+    void correct(const MEAS_MODEL& meas_model, PARAMS...);
 
-    template <typename... PARAMS>
-    void correct(const MeasurementModel<PARAMS...>& meas_model, MEAS meas,
-                 PARAMS...);
+    template <typename MEAS_MODEL, typename... PARAMS>
+    void correct(const MEAS_MODEL& meas_model, MEAS meas, PARAMS...);
 
     void setState(const STATE& state);
 
@@ -104,7 +96,7 @@ namespace unscented
 
     const MeasurementSigmaPoints& getMeasurementSigmaPoints() const;
 
-    void setWeightCoefficients(SCALAR alpha, SCALAR beta, SCALAR kappa);
+    void setWeightCoefficients(double alpha, double beta, double kappa);
 
     const SigmaWeights& getMeanSigmaWeights() const;
 
@@ -151,15 +143,15 @@ namespace unscented
 
     SigmaWeights sigma_weights_cov_;
 
-    SCALAR alpha_ = 0.001;
+    double alpha_ = 0.001;
 
-    SCALAR beta_ = 2.0;
+    double beta_ = 2.0;
 
-    SCALAR kappa_ = 0.0;
+    double kappa_ = 0.0;
 
-    SCALAR lambda_;
+    double lambda_;
 
-    SCALAR eta_;
+    double eta_;
 
     StateMeanFunction state_mean_function_;
 
