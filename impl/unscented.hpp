@@ -379,8 +379,8 @@ namespace unscented
   {
     // Calculate the (weighted) matrix square root of the state covariance
     // matrix
-    cholesky.compute(P_);
-    const N_by_N& sqrt_P = eta_ * cholesky.matrixL().toDenseMatrix();
+    cholesky_.compute(P_);
+    const N_by_N& sqrt_P = eta_ * cholesky_.matrixL().toDenseMatrix();
 
     // First sigma point is the current state mean
     sigma_points_[0] = x_;

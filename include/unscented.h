@@ -158,6 +158,6 @@ namespace unscented
 
     MeasurementMeanFunction meas_mean_function_;
 
-    Eigen::LLT<N_by_N> cholesky;
+    Eigen::LLT<N_by_N> cholesky_;
   };
 } // namespace unscented
