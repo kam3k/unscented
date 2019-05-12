@@ -6,19 +6,18 @@
 namespace unscented
 {
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::UKF()
+            std::size_t MEAS_DOF>
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::UKF()
   {
     P_ = N_by_N::Identity();
     Q_ = N_by_N::Identity();
     R_ = M_by_M::Identity();
 
-    calculateWeights();
+    calculate_weights();
 
     // Default state mean function is simply the weighted average of all states
     state_mean_function_ = [this](const SigmaPoints& states,
-                                  const SigmaWeights& weights) 
-    {
+                                  const SigmaWeights& weights) {
       STATE weighted_state = states[0] * weights[0];
       return std::inner_product(states.begin() + 1, states.end(),
                                 weights.begin() + 1, weighted_state);
@@ -27,8 +26,7 @@ namespace unscented
     // Default meas mean function is simply the weighted average of all
     // measurements
     meas_mean_function_ = [this](const MeasurementSigmaPoints& measurements,
-                                 const SigmaWeights& weights) 
-    {
+                                 const SigmaWeights& weights) {
       MEAS weighted_meas = measurements[0] * weights[0];
       return std::inner_product(measurements.begin() + 1, measurements.end(),
                                 weights.begin() + 1, weighted_meas);
@@ -36,12 +34,12 @@ namespace unscented
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
+            std::size_t MEAS_DOF>
   template <typename SYS_MODEL, typename... PARAMS>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::predict(
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::predict(
       const SYS_MODEL& system_model, PARAMS... params)
   {
-    generateSigmaPoints();
+    generate_sigma_points();
 
     // Transform each sigma point through the system model
     for (std::size_t i = 0; i < N; ++i)
@@ -51,26 +49,25 @@ namespace unscented
 
     // The (a priori) state is the weighted mean of the transformed sigma points
     x_ = state_mean_function_(sigma_points_, sigma_weights_mean_);
-    
+
     // Calculate the state covariance
     P_ = Q_ +
          std::inner_product(sigma_points_.begin(), sigma_points_.end(),
                             sigma_weights_cov_.begin(), N_by_N(N_by_N::Zero()),
                             std::plus<N_by_N>(),
-                            [this](const STATE& state, const SCALAR& weight) 
-                            {
+                            [this](const STATE& state, double weight) {
                               const N_by_1 diff = state - x_;
-                              return diff * diff.transpose() * weight;
+                              return N_by_N(diff * diff.transpose() * weight);
                             });
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
+            std::size_t MEAS_DOF>
   template <typename MEAS_MODEL, typename... PARAMS>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::correct(
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::correct(
       const MEAS_MODEL& meas_model, PARAMS... params)
   {
-    generateSigmaPoints();
+    generate_sigma_points();
 
     // Transform each sigma point through the measurement model
     for (std::size_t i = 0; i < N; ++i)
@@ -83,15 +80,14 @@ namespace unscented
     y_hat_ = meas_mean_function_(meas_sigma_points_, sigma_weights_mean_);
 
     // Calculate the expected measurement covariance
-    Pyy_ = R_ + std::inner_product(
-                   meas_sigma_points_.begin(), meas_sigma_points_.end(),
-                   sigma_weights_cov_.begin(), M_by_M(M_by_M::Zero()),
-                   std::plus<M_by_M>(),
-                   [this](const MEAS& meas, const SCALAR& weight) 
-                   {
-                     const M_by_1 diff = meas - y_hat_;
-                     return diff * diff.transpose() * weight;
-                   });
+    Pyy_ = R_ + std::inner_product(meas_sigma_points_.begin(),
+                                   meas_sigma_points_.end(),
+                                   sigma_weights_cov_.begin(),
+                                   M_by_M(M_by_M::Zero()), std::plus<M_by_M>(),
+                                   [this](const MEAS& meas, double weight) {
+                                     const M_by_1 diff = meas - y_hat_;
+                                     return diff * diff.transpose() * weight;
+                                   });
 
     // Calculate the cross covariance between the state and expected measurement
     // (would love to have Python's zip(...) functionality here)
@@ -112,260 +108,250 @@ namespace unscented
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
+            std::size_t MEAS_DOF>
   template <typename MEAS_MODEL, typename... PARAMS>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::correct(
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::correct(
       const MEAS_MODEL& meas_model, MEAS meas, PARAMS... params)
   {
-    setMeasurement(std::move(meas));
+    set_measurement(std::move(meas));
     correct(meas_model, params...);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setState(
-      const STATE& state)
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_state(const STATE& state)
   {
     x_ = state;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setState(STATE&& state)
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_state(STATE&& state)
   {
     x_ = std::move(state);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const STATE& UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getState() const
+            std::size_t MEAS_DOF>
+  const STATE& UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_state() const
   {
     return x_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setMeasurement(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_measurement(
       const MEAS& measurement)
   {
     y_ = measurement;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setMeasurement(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_measurement(
       MEAS&& measurement)
   {
     y_ = std::move(measurement);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const MEAS& UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeasurement()
-      const
+            std::size_t MEAS_DOF>
+  const MEAS& UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_measurement() const
   {
     return y_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setStateCovariance(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_state_covariance(
       const N_by_N& state_covariance)
   {
     P_ = state_covariance;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setStateCovariance(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_state_covariance(
       N_by_N&& state_covariance)
   {
     P_ = std::move(state_covariance);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::N_by_N&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getStateCovariance() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::N_by_N&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_state_covariance() const
   {
     return P_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setProcessCovariance(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_process_covariance(
       const N_by_N& process_covariance)
   {
     Q_ = process_covariance;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setProcessCovariance(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_process_covariance(
       N_by_N&& process_covariance)
   {
     Q_ = std::move(process_covariance);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::N_by_N&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getProcessCovariance() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::N_by_N&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_process_covariance() const
   {
     return Q_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setMeasurementCovariance(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_measurement_covariance(
       const M_by_M& measurement_covariance)
   {
     R_ = measurement_covariance;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setMeasurementCovariance(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_measurement_covariance(
       M_by_M&& measurement_covariance)
   {
     R_ = std::move(measurement_covariance);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::M_by_M&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeasurementCovariance()
-      const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::M_by_M&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_measurement_covariance() const
   {
     return R_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const MEAS&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getExpectedMeasurement() const
+            std::size_t MEAS_DOF>
+  const MEAS& UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_expected_measurement()
+      const
   {
     return y_hat_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::M_by_M&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
-      SCALAR>::getExpectedMeasurementCovariance() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::M_by_M&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_expected_measurement_covariance()
+      const
   {
     return Pyy_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::N_by_M&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getCrossCovariance() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::N_by_M&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_cross_covariance() const
   {
     return Pxy_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::N_by_M&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getKalmanGain() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::N_by_M&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_kalman_gain() const
   {
     return K_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::M_by_1&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getInnovation() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::M_by_1&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_innovation() const
   {
     return innovation_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::SigmaPoints&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getSigmaPoints() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::SigmaPoints&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_sigma_points() const
   {
     return sigma_points_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
-                     SCALAR>::MeasurementSigmaPoints&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeasurementSigmaPoints()
-      const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::MeasurementSigmaPoints&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_measurement_sigma_points() const
   {
     return meas_sigma_points_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setWeightCoefficients(
-      SCALAR alpha, SCALAR beta, SCALAR kappa)
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_weight_coefficients(
+      double alpha, double beta, double kappa)
   {
     alpha_ = alpha;
     beta_ = beta;
     kappa_ = kappa;
-    calculateWeights();
+    calculate_weights();
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::SigmaWeights&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeanSigmaWeights() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::SigmaWeights&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_mean_sigma_weights() const
   {
     return sigma_weights_mean_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::SigmaWeights&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getCovarianceSigmaWeights()
-      const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::SigmaWeights&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_covariance_sigma_weights() const
   {
     return sigma_weights_cov_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setStateMeanFunction(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_state_mean_function(
       StateMeanFunction state_mean_function)
   {
     state_mean_function_ = std::move(state_mean_function);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
-                     SCALAR>::StateMeanFunction&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getStateMeanFunction() const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::StateMeanFunction&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_state_mean_function() const
   {
     return state_mean_function_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::setMeasurementMeanFunction(
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_measurement_mean_function(
       MeasurementMeanFunction meas_mean_function)
   {
     meas_mean_function_ = std::move(meas_mean_function);
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF,
-                     SCALAR>::MeasurementMeanFunction&
-  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::getMeasurementMeanFunction()
-      const
+            std::size_t MEAS_DOF>
+  const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::MeasurementMeanFunction&
+  UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_measurement_mean_function() const
   {
     return meas_mean_function_;
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::calculateWeights()
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::calculate_weights()
   {
     lambda_ = alpha_ * alpha_ * (N + kappa_) - N;
 
@@ -380,7 +366,7 @@ namespace unscented
     sigma_weights_mean_[0] = w_mean_0;
     sigma_weights_cov_[0] = w_cov_0;
 
-    for (auto i = 1; i < NUM_SIGMA_POINTS; ++i)
+    for (std::size_t i = 1; i < NUM_SIGMA_POINTS; ++i)
     {
       sigma_weights_mean_[i] = w_i;
       sigma_weights_cov_[i] = w_i;
@@ -388,10 +374,11 @@ namespace unscented
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR>
-  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF, SCALAR>::generateSigmaPoints()
+            std::size_t MEAS_DOF>
+  void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::generate_sigma_points()
   {
-    // Calculate the (weighted) matrix square root of the state covariance matrix
+    // Calculate the (weighted) matrix square root of the state covariance
+    // matrix
     cholesky.compute(P_);
     const N_by_N& sqrt_P = eta_ * cholesky.matrixL().toDenseMatrix();
 

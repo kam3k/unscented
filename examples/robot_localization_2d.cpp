@@ -1,9 +1,9 @@
 #include "unscented.hpp"
 
-#include <random>
 #include <iostream>
+#include <random>
 
-float wrapAngle(float angle)
+double wrapAngle(double angle)
 {
   angle = fmod(angle + M_PI, 2 * M_PI);
   if (angle < 0.0f)
@@ -17,18 +17,18 @@ struct RobotState
 {
   RobotState() = default;
 
-  RobotState(float x, float y, float theta) : x(x), y(y), theta(theta)
+  RobotState(double x, double y, double theta) : x(x), y(y), theta(theta)
   {
   }
 
-  RobotState(const Eigen::Vector3f& vec)
+  RobotState(const Eigen::Vector3d& vec)
     : x(vec.x()), y(vec.y()), theta(vec.z())
   {
   }
 
-  float x = 0.0f;
-  float y = 0.0f;
-  float theta = 0.0f;
+  double x = 0.0;
+  double y = 0.0;
+  double theta = 0.0;
 };
 
 RobotState operator+(const RobotState& rhs, const RobotState& lhs)
@@ -36,13 +36,13 @@ RobotState operator+(const RobotState& rhs, const RobotState& lhs)
   return {rhs.x + lhs.x, rhs.y + lhs.y, wrapAngle(rhs.theta + lhs.theta)};
 }
 
-Eigen::Vector3f operator-(const RobotState& rhs, const RobotState& lhs)
+Eigen::Vector3d operator-(const RobotState& rhs, const RobotState& lhs)
 {
-  return Eigen::Vector3f(rhs.x - lhs.x, rhs.y - lhs.y,
+  return Eigen::Vector3d(rhs.x - lhs.x, rhs.y - lhs.y,
                          wrapAngle(rhs.theta - lhs.theta));
 }
 
-RobotState operator*(const RobotState& state, float scale)
+RobotState operator*(const RobotState& state, double scale)
 {
   return RobotState(state.x * scale, state.y * scale, state.theta * scale);
 }
@@ -57,40 +57,44 @@ struct RobotMeasurement
 {
   RobotMeasurement() = default;
 
-  RobotMeasurement(float range, float bearing) : range(range), bearing(bearing)
+  RobotMeasurement(double range, double bearing)
+    : range(range), bearing(bearing)
   {
   }
 
-  float range;
-  float bearing;
+  double range;
+  double bearing;
 };
 
-RobotMeasurement operator+(const RobotMeasurement& rhs, const RobotMeasurement& lhs)
+RobotMeasurement operator+(const RobotMeasurement& rhs,
+                           const RobotMeasurement& lhs)
 {
   return RobotMeasurement(rhs.range + lhs.range,
                           wrapAngle(rhs.bearing + lhs.bearing));
 }
 
-Eigen::Vector2f operator-(const RobotMeasurement& rhs,
+Eigen::Vector2d operator-(const RobotMeasurement& rhs,
                           const RobotMeasurement& lhs)
 {
-  return Eigen::Vector2f(rhs.range - lhs.range,
+  return Eigen::Vector2d(rhs.range - lhs.range,
                          wrapAngle(rhs.bearing - lhs.bearing));
 }
 
-RobotMeasurement operator*(const RobotMeasurement& meas, float scale)
+RobotMeasurement operator*(const RobotMeasurement& meas, double scale)
 {
   return RobotMeasurement(meas.range * scale, meas.bearing * scale);
 }
 
-void systemModel(RobotState& state, float velocity, float angular_velocity, float T)
+void systemModel(RobotState& state, double velocity, double angular_velocity,
+                 double T)
 {
   state.x += velocity * std::cos(state.theta) * T;
   state.y += velocity * std::sin(state.theta) * T;
   state.theta = wrapAngle(state.theta + angular_velocity * T);
 }
 
-RobotMeasurement measurementModel(const RobotState& state, const Eigen::Vector2f& landmark)
+RobotMeasurement measurementModel(const RobotState& state,
+                                  const Eigen::Vector2d& landmark)
 {
   const auto expected_range = std::sqrt(std::pow(landmark.x() - state.x, 2) +
                                         std::pow(landmark.y() - state.y, 2));
@@ -104,25 +108,25 @@ int main()
   using UKF = unscented::UKF<RobotState, 3, RobotMeasurement, 2>;
 
   // Setup the simulation
-  const auto SIM_DURATION = 5.0f; // total simulation duration
-  const auto T = 0.02f; // time between prediction steps (i.e., input period)
-  const auto MEAS_PERIOD = 0.1f; // time between measurements
+  const auto SIM_DURATION = 5.0; // total simulation duration
+  const auto T = 0.02; // time between prediction steps (i.e., input period)
+  const auto MEAS_PERIOD = 0.1; // time between measurements
   const std::size_t NUM_LANDMARKS = 4; // total number of landmarks
-  const std::array<Eigen::Vector2f, NUM_LANDMARKS> LANDMARKS = {{
-      {1.0f, 4.0f},
-      {2.0f, 0.5f},
-      {2.5f, 3.5f},
-      {4.0f, 2.0f}}}; // positions of landmarks
-  const auto VEL_STD_DEV = 0.1f;
-  const auto ANG_VEL_STD_DEV = 0.071f;
-  UKF::State state_true(1.0f, 1.0f, 0.0f);
+  const std::array<Eigen::Vector2d, NUM_LANDMARKS> LANDMARKS = {
+      {{1.0, 4.0},
+       {2.0, 0.5},
+       {2.5, 3.5},
+       {4.0, 2.0}}}; // positions of landmarks
+  const auto VEL_STD_DEV = 0.1;
+  const auto ANG_VEL_STD_DEV = 0.071;
+  UKF::State state_true(1.0, 1.0, 0.0);
 
   // Function to simulate a range/bearing measurement given the current robot
   // state and a landmark
   auto simulate_measurement = [](const RobotState& state,
-                                 const Eigen::Vector2f& landmark) {
-    const auto range = std::sqrt(std::pow(landmark.x() - state.x, 2.0f) +
-                                 std::pow(landmark.y() - state.y, 2.0f));
+                                 const Eigen::Vector2d& landmark) {
+    const auto range = std::sqrt(std::pow(landmark.x() - state.x, 2.0) +
+                                 std::pow(landmark.y() - state.y, 2.0));
     const auto bearing =
         wrapAngle(std::atan2(landmark.y() - state.y, landmark.x() - state.x) -
                   state.theta);
@@ -132,39 +136,34 @@ int main()
   // Setup the UKF (initial state, state covariance, system covariance,
   // measurement covariance)
   UKF ukf;
-  UKF::State state_init(1.1f, 0.9f, M_PI / 12);
-  ukf.setState(state_init);
+  UKF::State state_init(1.1, 0.9, M_PI / 12);
+  ukf.set_state(state_init);
   UKF::N_by_N P_init;
-  P_init << 0.500, 0.000, 0.000,
-            0.000, 0.500, 0.000,
-            0.000, 0.000, 0.250;
-  ukf.setStateCovariance(P_init);
+  P_init << 0.500, 0.000, 0.000, 0.000, 0.500, 0.000, 0.000, 0.000, 0.250;
+  ukf.set_state_covariance(P_init);
   UKF::N_by_N Q;
-  Q << 0.002, 0.000, 0.000,
-       0.000, 0.002, 0.000,
-       0.000, 0.000, 0.002;
-  ukf.setProcessCovariance(Q);
+  Q << 0.002, 0.000, 0.000, 0.000, 0.002, 0.000, 0.000, 0.000, 0.002;
+  ukf.set_process_covariance(Q);
   UKF::M_by_M R;
-  R << 0.063, 0.000,
-       0.000, 0.007;
-  ukf.setMeasurementCovariance(R);
+  R << 0.063, 0.000, 0.000, 0.007;
+  ukf.set_measurement_covariance(R);
 
   // Setup random number generation
   std::random_device rd{};
   std::mt19937 gen{rd()};
-  std::normal_distribution<float> vel_noise(0.0f, VEL_STD_DEV);
-  std::normal_distribution<float> ang_vel_noise(0.0f, ANG_VEL_STD_DEV);
-  std::normal_distribution<float> range_noise(0.0f, std::sqrt(R(0, 0)));
-  std::normal_distribution<float> bearing_noise(0.0f, std::sqrt(R(1, 1)));
+  std::normal_distribution<double> vel_noise(0.0, VEL_STD_DEV);
+  std::normal_distribution<double> ang_vel_noise(0.0, ANG_VEL_STD_DEV);
+  std::normal_distribution<double> range_noise(0.0, std::sqrt(R(0, 0)));
+  std::normal_distribution<double> bearing_noise(0.0, std::sqrt(R(1, 1)));
 
   // Run the simulation
-  float sim_time = 0.0f;
-  float last_meas_time = 0.0f;
+  double sim_time = 0.0;
+  double last_meas_time = 0.0;
   while (sim_time < SIM_DURATION)
   {
     // Get the simulated (true) inputs
-    const auto velocity = 0.5f;
-    const auto angular_velocity = 0.01f;
+    const auto velocity = 0.5;
+    const auto angular_velocity = 0.01;
 
     // Move the true state forward in time
     systemModel(state_true, velocity, angular_velocity, T);
@@ -175,7 +174,7 @@ int main()
 
     // Predict the estimated state forward in time
     ukf.predict(systemModel, velocity_noisy, angular_velocity_noisy, T);
-    std::cout << state_true << " " << ukf.getState() << " \n";
+    std::cout << state_true << " " << ukf.get_state() << " \n";
 
     // Check if it is time for a measurent
     if (sim_time - last_meas_time >= MEAS_PERIOD)

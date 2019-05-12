@@ -5,7 +5,7 @@
 namespace unscented
 {
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-            std::size_t MEAS_DOF, typename SCALAR = float>
+            std::size_t MEAS_DOF>
   class UKF
   {
   public:
@@ -19,15 +19,15 @@ namespace unscented
 
     using Measurement = MEAS;
 
-    using N_by_1 = Eigen::Matrix<SCALAR, N, 1>;
+    using N_by_1 = Eigen::Matrix<double, N, 1>;
 
-    using N_by_N = Eigen::Matrix<SCALAR, N, N>;
+    using N_by_N = Eigen::Matrix<double, N, N>;
 
-    using M_by_1 = Eigen::Matrix<SCALAR, M, 1>;
+    using M_by_1 = Eigen::Matrix<double, M, 1>;
 
-    using M_by_M = Eigen::Matrix<SCALAR, M, M>;
+    using M_by_M = Eigen::Matrix<double, M, M>;
 
-    using N_by_M = Eigen::Matrix<SCALAR, N, M>;
+    using N_by_M = Eigen::Matrix<double, N, M>;
 
     using SigmaPoints = std::array<STATE, NUM_SIGMA_POINTS>;
 
@@ -52,68 +52,69 @@ namespace unscented
     template <typename MEAS_MODEL, typename... PARAMS>
     void correct(const MEAS_MODEL& meas_model, MEAS meas, PARAMS...);
 
-    void setState(const STATE& state);
+    void set_state(const STATE& state);
 
-    void setState(STATE&& state);
+    void set_state(STATE&& state);
 
-    const STATE& getState() const;
+    const STATE& get_state() const;
 
-    void setMeasurement(const MEAS& measurement);
+    void set_measurement(const MEAS& measurement);
 
-    void setMeasurement(MEAS&& measurement);
+    void set_measurement(MEAS&& measurement);
 
-    const MEAS& getMeasurement() const;
+    const MEAS& get_measurement() const;
 
-    void setStateCovariance(const N_by_N& state_covariance);
+    void set_state_covariance(const N_by_N& state_covariance);
 
-    void setStateCovariance(N_by_N&& state_covariance);
+    void set_state_covariance(N_by_N&& state_covariance);
 
-    const N_by_N& getStateCovariance() const;
+    const N_by_N& get_state_covariance() const;
 
-    void setProcessCovariance(const N_by_N& process_covariance);
+    void set_process_covariance(const N_by_N& process_covariance);
 
-    void setProcessCovariance(N_by_N&& process_covariance);
+    void set_process_covariance(N_by_N&& process_covariance);
 
-    const N_by_N& getProcessCovariance() const;
+    const N_by_N& get_process_covariance() const;
 
-    void setMeasurementCovariance(const M_by_M& measurement_covariance);
+    void set_measurement_covariance(const M_by_M& measurement_covariance);
 
-    void setMeasurementCovariance(M_by_M&& measurement_covariance);
+    void set_measurement_covariance(M_by_M&& measurement_covariance);
 
-    const M_by_M& getMeasurementCovariance() const;
+    const M_by_M& get_measurement_covariance() const;
 
-    const MEAS& getExpectedMeasurement() const;
+    const MEAS& get_expected_measurement() const;
 
-    const M_by_M& getExpectedMeasurementCovariance() const;
+    const M_by_M& get_expected_measurement_covariance() const;
 
-    const N_by_M& getCrossCovariance() const;
+    const N_by_M& get_cross_covariance() const;
 
-    const N_by_M& getKalmanGain() const;
+    const N_by_M& get_kalman_gain() const;
 
-    const M_by_1& getInnovation() const;
+    const M_by_1& get_innovation() const;
 
-    const SigmaPoints& getSigmaPoints() const;
+    const SigmaPoints& get_sigma_points() const;
 
-    const MeasurementSigmaPoints& getMeasurementSigmaPoints() const;
+    const MeasurementSigmaPoints& get_measurement_sigma_points() const;
 
-    void setWeightCoefficients(double alpha, double beta, double kappa);
+    void set_weight_coefficients(double alpha, double beta, double kappa);
 
-    const SigmaWeights& getMeanSigmaWeights() const;
+    const SigmaWeights& get_mean_sigma_weights() const;
 
-    const SigmaWeights& getCovarianceSigmaWeights() const;
+    const SigmaWeights& get_covariance_sigma_weights() const;
 
-    void setStateMeanFunction(StateMeanFunction state_mean_function);
+    void set_state_mean_function(StateMeanFunction state_mean_function);
 
-    const StateMeanFunction& getStateMeanFunction() const;
+    const StateMeanFunction& get_state_mean_function() const;
 
-    void setMeasurementMeanFunction(MeasurementMeanFunction meas_mean_function);
+    void set_measurement_mean_function(
+        MeasurementMeanFunction meas_mean_function);
 
-    const MeasurementMeanFunction& getMeasurementMeanFunction() const;
+    const MeasurementMeanFunction& get_measurement_mean_function() const;
 
   private:
-    void calculateWeights();
+    void calculate_weights();
 
-    void generateSigmaPoints();
+    void generate_sigma_points();
 
     STATE x_;
 
