@@ -85,6 +85,12 @@ RobotMeasurement operator*(const RobotMeasurement& meas, double scale)
   return RobotMeasurement(meas.range * scale, meas.bearing * scale);
 }
 
+std::ostream& operator<<(std::ostream& os, const RobotMeasurement& meas)
+{
+  os << "(" << meas.range << ", " << meas.bearing << ")";
+  return os;
+}
+
 void systemModel(RobotState& state, double velocity, double angular_velocity,
                  double T)
 {

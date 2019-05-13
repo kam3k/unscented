@@ -19,8 +19,11 @@ namespace unscented
     state_mean_function_ = [this](const SigmaPoints& states,
                                   const SigmaWeights& weights) {
       STATE weighted_state = states[0] * weights[0];
-      return std::inner_product(states.begin() + 1, states.end(),
-                                weights.begin() + 1, weighted_state);
+      for (std::size_t i = 1; i < NUM_SIGMA_POINTS; ++i)
+      {
+        weighted_state = weighted_state + states[i] * weights[i];
+      }
+      return weighted_state;
     };
 
     // Default meas mean function is simply the weighted average of all
@@ -28,8 +31,11 @@ namespace unscented
     meas_mean_function_ = [this](const MeasurementSigmaPoints& measurements,
                                  const SigmaWeights& weights) {
       MEAS weighted_meas = measurements[0] * weights[0];
-      return std::inner_product(measurements.begin() + 1, measurements.end(),
-                                weights.begin() + 1, weighted_meas);
+      for (std::size_t i = 1; i < NUM_SIGMA_POINTS; ++i)
+      {
+        weighted_meas = weighted_meas + measurements[i] * weights[i];
+      }
+      return weighted_meas;
     };
   }
 
@@ -42,23 +48,21 @@ namespace unscented
     generate_sigma_points();
 
     // Transform each sigma point through the system model
-    for (std::size_t i = 0; i < N; ++i)
+    for (auto& sigma_point : sigma_points_)
     {
-      system_model(sigma_points_[i], params...);
+      system_model(sigma_point, params...);
     }
 
     // The (a priori) state is the weighted mean of the transformed sigma points
     x_ = state_mean_function_(sigma_points_, sigma_weights_mean_);
 
     // Calculate the state covariance
-    P_ = Q_ +
-         std::inner_product(sigma_points_.begin(), sigma_points_.end(),
-                            sigma_weights_cov_.begin(), N_by_N(N_by_N::Zero()),
-                            std::plus<N_by_N>(),
-                            [this](const STATE& state, double weight) {
-                              const N_by_1 diff = state - x_;
-                              return N_by_N(diff * diff.transpose() * weight);
-                            });
+    P_ = Q_;
+    for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
+    {
+      const N_by_1 diff = sigma_points_[i] - x_;
+      P_ += (diff * diff.transpose()) * sigma_weights_cov_[i];
+    }
   }
 
   template <typename STATE, std::size_t STATE_DOF, typename MEAS,
@@ -70,7 +74,7 @@ namespace unscented
     generate_sigma_points();
 
     // Transform each sigma point through the measurement model
-    for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
     {
       meas_sigma_points_[i] = meas_model(sigma_points_[i], params...);
     }
@@ -80,19 +84,17 @@ namespace unscented
     y_hat_ = meas_mean_function_(meas_sigma_points_, sigma_weights_mean_);
 
     // Calculate the expected measurement covariance
-    Pyy_ = R_ + std::inner_product(meas_sigma_points_.begin(),
-                                   meas_sigma_points_.end(),
-                                   sigma_weights_cov_.begin(),
-                                   M_by_M(M_by_M::Zero()), std::plus<M_by_M>(),
-                                   [this](const MEAS& meas, double weight) {
-                                     const M_by_1 diff = meas - y_hat_;
-                                     return diff * diff.transpose() * weight;
-                                   });
+    Pyy_ = R_;
+    for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
+    {
+      const M_by_1 diff = meas_sigma_points_[i] - y_hat_;
+      Pyy_ += diff * diff.transpose() * sigma_weights_cov_[i];
+    }
 
     // Calculate the cross covariance between the state and expected measurement
     // (would love to have Python's zip(...) functionality here)
     Pxy_ = N_by_M::Zero();
-    for (std::size_t i = 0; i < N; ++i)
+    for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
     {
       Pxy_ += sigma_weights_cov_[i] * (sigma_points_[i] - x_) *
               (meas_sigma_points_[i] - y_hat_).transpose();
