@@ -13,6 +13,8 @@ add_library(unscented src/instantiations.cpp)
 target_include_directories(unscented PUBLIC include impl ${EIGEN3_INCLUDE_DIR})
 
 # Examples
+add_executable(airplane_tracking examples/airplane_tracking.cpp)
+target_link_libraries(airplane_tracking unscented)
 add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
 target_link_libraries(robot_localization_2d unscented)
 
