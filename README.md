@@ -1,6 +1,6 @@
-# unscented
+![unscented](media/unscented.png)
 
-A flexible and powerful unscented Kalman filter C++11 library that makes no assumptions about what you're estimating and how you're measuring it.
+A flexible and powerful unscented Kalman filter C++11 library that makes no assumptions about what you're estimating or how you're measuring it.
 
 ## Table of contents
 * [What's an unscented Kalman filter?](#whats-an-unscented-kalman-filter)
