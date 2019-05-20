@@ -17,7 +17,7 @@ target_include_directories(unscented PUBLIC include impl ${EIGEN3_INCLUDE_DIR})
 
 # Airplane tracking example
 add_executable(airplane_tracking examples/airplane_tracking.cpp)
-target_include_directories(airplane_tracking PRIVATE depends ${PYTHON_INCLUDE_DIRS})
+target_include_directories(airplane_tracking PRIVATE optional ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(airplane_tracking unscented ${PYTHON_LIBRARIES})
 
 # Robot localization example
