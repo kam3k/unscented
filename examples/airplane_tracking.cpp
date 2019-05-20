@@ -1,6 +1,11 @@
 #include "unscented.hpp"
 
+#include "matplotlibcpp.h"
+
+#include <valarray>
 #include <random>
+
+namespace plt = matplotlibcpp;
 
 ///////////////////////////////////////////////////////////////////////////////
 // Utility functions
@@ -259,9 +264,6 @@ int main()
   // Plot the results
   //////////////////////////////////////////////////////////////////////////////
 
-#include "matplotlibcpp.h"
-#include <valarray>
-
   std::vector<double> true_positions;
   std::vector<double> true_velocities;
   std::vector<double> true_altitudes;
@@ -298,7 +300,6 @@ int main()
         std::sqrt(state_cov(CLIMB_RATE, CLIMB_RATE));
   }
 
-  namespace plt = matplotlibcpp;
   plt::subplot(4, 1, 1);
   plt::plot(
       sim_time_history, true_positions, "k-", sim_time_history,
