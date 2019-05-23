@@ -6,6 +6,7 @@ A flexible and powerful unscented Kalman filter library (C++11 or later) that ma
 * [What is an unscented Kalman filter?](#what-is-an-unscented-kalman-filter)
 * [Features](#features)
 * [Installation](#installation)
+* [Documentation](#documentation)
 * [Examples](#examples)
 	* [Airplane tracking](#airplane-tracking)
 	* [Robot localization](#robot-localization)
@@ -19,9 +20,39 @@ A flexible and powerful unscented Kalman filter library (C++11 or later) that ma
 
 ## What is an unscented Kalman filter?
 
+A Kalman filter (KF) is an algorithm that takes a series of measurements over time (e.g., positions, temperatures, distances, pressures, velocities, etc.) and produces estimates of an unknown state with accuracy better than each individual measurement. It accomplishes this by modelling the uncertainty of all concerned variables (e.g., the noise in sensor measurements) and combining them in such a way that optimises the resulting estimates of the state.
+
+For example, a KF is well-suited for estimating the state of a car (e.g., its position, speed, turning rate, etc.) by combining measurements from a GPS device, the car's speedometer and steering angle, and a model of how a car moves (e.g., cars do not tend to move laterally, rather they move in the direction their wheels are facing). Combining these elements in a KF provides a better estimate of the car's state than any of the individual measurements.
+
+An unscented Kalman filter (UKF) is a nonlinear extension to the KF that handles problems where the dynamics of the state or the relationship between the measurements and the state are nonlinear. In all but the simplest applications, these nonlinearities exist. In fact, it is rare that KF is implemented in its pure linear form. A tip-of-the-iceberg explanation of UKFs, written to provide an intuitive feel for the algorithm, is [available below](#background).
+
+The KF became well known during NASA's Apollo program in the 1960s, where it helped navigate spacecraft on missions to the moon. It has since been used in a plethora of applications; including weather forecasting, autopilot, speech enhancement, vehicle tracking, economics, and [many more](https://en.wikipedia.org/wiki/Kalman_filter#Applications).
+
 ## Features
 
+The features of *unscented* follow from its goals and motivation for being written. Some inspiration for *unscented* came from the excellent Python library [FilterPy](https://github.com/rlabbe/filterpy), which includes an excellent [UKF library](https://filterpy.readthedocs.io/en/latest/kalman/UnscentedKalmanFilter.html) with many of the same features as *unscented*. There are a number of C++ libraries available that include UKF implementations (e.g., [1](https://github.com/sfwa/ukf), [2](http://jeremyfix.github.io/easykf/), [3](http://verdandi.sourceforge.net/doc-1.6/unscented_kalman_filter.php), [4](https://libraries.io/github/preritj/Unscented-Kalman-Filter), [5](https://github.com/mithi/fusion-ukf), [6](https://libraries.io/github/Veilkrand/Unscented-Kalman-Filter-Sensor-Fusion)), but none that meet all the features described below.
+
+##### Flexible
+
+There are no constraints on the mathematical spaces of the state and measurements in *unscented*. Some (many) libraries require the state and measurements to live in vector spaces. On the other hand, with *unscented* the state can be an arbitrary class as long as it includes a few overloaded operators. This allows one to use, for example, a 3D affine transformation for the pose of a vehicle (often parameterised as a 4x4 transformation matrix), or non-minimal representations of rotations, or unit vectors. 
+
+Furthermore, *unscented* allows one to easily use multiple system models, multiple measurement models, and custom functions for calculating means (e.g., the average of a bunch of angles isn't their sum divided by the number of angles).
+
+##### Expansive API
+
+It is good practice to encapsulate code and only provide a public interface that is required for users to make use of a library. That being said, *unscented* opens up its doors a little to allow users to peek at its internals and even modify steps of the UKF. For example, the results of all intermediate calculations are available (e.g., the innovation of the latest measurement and its covariance, the latest sigma points). One can even generate sigma points or manually update the state or its covariance. This promotes using *unscented* as a base for extending the UKF or using it in a research or custom application.
+
+##### Well-documented
+
+Software that is clearly written and well documented tends to get used more than other software, even if that other software is more cleverly written, faster, or even has more features. It is a goal of *unscented* to fall firmly in the former category, offering plenty of [examples](#examples), [documentation](#documentation), and a formal API. It is not a goal of *unscented* to be the fastest or smallest implementation, but it should be one of the easiest to use, fix, and contribute to.
+
+##### Tested
+
+There is a disturbingly large amount of software out there that contains no form of testing beyond "it worked in first application in which it was needed". Put differently, new users are guinea pigs who are immediately wandering into untested waters. It is hoped that along with its unit tests, the readability and documentation of *unscented* will make it easy for new contributors to help keep things in good shape and contribute their own tests for new features.
+
 ## Installation
+
+## Documentation
 
 ## Examples
 
