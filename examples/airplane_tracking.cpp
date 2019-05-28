@@ -2,8 +2,8 @@
 
 #include "matplotlibcpp.h"
 
-#include <valarray>
 #include <random>
+#include <valarray>
 
 namespace plt = matplotlibcpp;
 
@@ -11,11 +11,11 @@ namespace plt = matplotlibcpp;
 // Utility functions
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * @brief Given an angle in radians, wraps it to [-pi, pi)
- * 
+ *
  * @param[in] angle
- * 
+ *
  * @return Angle wrapped to range [-pi, pi)
  */
 double wrap_angle(double angle)
@@ -55,10 +55,8 @@ enum StateElements
 void system_model(AirplaneState& state, double dt)
 {
   Eigen::Matrix4d F;
-  F << 1.0,  dt, 0.0, 0.0,
-       0.0, 1.0, 0.0, 0.0,
-       0.0, 0.0, 1.0,  dt,
-       0.0, 0.0, 0.0, 1.0;
+  F << 1.0, dt, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, dt, 0.0, 0.0, 0.0,
+      1.0;
   state = F * state;
 }
 
@@ -66,12 +64,12 @@ void system_model(AirplaneState& state, double dt)
 // Measurement and measurement model
 ///////////////////////////////////////////////////////////////////////////////
 
-/** 
+/**
  * @brief The radar measurement consists of a range and elevation
  */
 struct RadarMeasurement
 {
-  /** 
+  /**
    * @brief Default constructor (required by filter)
    */
   RadarMeasurement() = default;
@@ -83,7 +81,9 @@ struct RadarMeasurement
    * @param[in] r Measured range to airplane
    * @param[in] e Measured elevation of airplane
    */
-  RadarMeasurement(double r, double e) : range(r), elevation(e) {}
+  RadarMeasurement(double r, double e) : range(r), elevation(e)
+  {
+  }
 
   /** Range to airplane */
   double range;
@@ -234,14 +234,14 @@ int main()
     // One minute into the simulation, set a non-zero climb rate
     if (sim_time > 60.0)
     {
-      true_state[CLIMB_RATE] = 300.0/60; // 300 m/min 
+      true_state[CLIMB_RATE] = 300.0 / 60; // 300 m/min
     }
 
     // Update the true position and altitude, adding some noise to the velocity
     // to make up for deficiencies in the constant velocity model (i.e., it's
     // unlikely the velocity was constant throughout the full time step)
     true_state[POSITION] += (true_state[VELOCITY] + vel_noise(gen)) * DT;
-    true_state[ALTITUDE] += (true_state[CLIMB_RATE] + vel_noise(gen))* DT;
+    true_state[ALTITUDE] += (true_state[CLIMB_RATE] + vel_noise(gen)) * DT;
     true_state_history.push_back(true_state);
 
     // Simulate a measurement based on the true state
@@ -275,7 +275,7 @@ int main()
     true_altitudes.push_back(state[ALTITUDE]);
     true_climb_rates.push_back(state[CLIMB_RATE]);
   }
-  
+
   const auto hist_size = sim_time_history.size();
   std::valarray<double> estimated_positions(hist_size);
   std::valarray<double> estimated_positions_std_devs(hist_size);
