@@ -23,3 +23,9 @@ target_link_libraries(airplane_tracking unscented ${PYTHON_LIBRARIES})
 # Robot localization example
 add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
 target_link_libraries(robot_localization_2d unscented)
+
+# Tests
+enable_testing()
+add_executable(test_unscented test/test_unscented.cpp) 
+target_link_libraries(test_unscented unscented)
+add_test(NAME test_unscented COMMAND test_unscented)
