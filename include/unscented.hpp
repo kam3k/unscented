@@ -5,6 +5,21 @@
 
 namespace unscented
 {
+// Need to explicitly provide the definitions of N, M, and NUM_SIGMA_POINTS
+// despite their declaration and initialization being in the .h file (see
+// https://stackoverflow.com/q/8016780 for more info)
+template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+          std::size_t MEAS_DOF>
+constexpr std::size_t UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::N;
+
+template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+          std::size_t MEAS_DOF>
+constexpr std::size_t UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::M;
+
+template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+          std::size_t MEAS_DOF>
+constexpr std::size_t UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::NUM_SIGMA_POINTS;
+
 template <typename STATE, std::size_t STATE_DOF, typename MEAS,
           std::size_t MEAS_DOF>
 UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::UKF()

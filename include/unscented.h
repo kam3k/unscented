@@ -9,11 +9,11 @@ template <typename STATE, std::size_t STATE_DOF, typename MEAS,
 class UKF
 {
 public:
-  static constexpr auto NUM_SIGMA_POINTS = 2 * STATE_DOF + 1;
-
   static constexpr auto N = STATE_DOF;
 
   static constexpr auto M = MEAS_DOF;
+
+  static constexpr auto NUM_SIGMA_POINTS = 2 * N + 1;
 
   using State = STATE;
 
