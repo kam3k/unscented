@@ -145,6 +145,7 @@ TEST_CASE("Sigma points")
     ukf.generate_sigma_points();
     const auto& sigma_points = ukf.get_sigma_points();
 
+    REQUIRE(UKF::NUM_SIGMA_POINTS == 7);
     REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
     CHECK(sigma_points[0].x() == Approx(1.0));
     CHECK(sigma_points[0].y() == Approx(2.0));
@@ -174,16 +175,35 @@ TEST_CASE("Sigma points")
     using UKF = UKF<Angle, 1, Angle, 1>;
     UKF ukf;
 
+    // No wrapping
     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-    ukf.set_state(UKF::State(1.0));
+    double init_angle = 1.0; // radians
+    ukf.set_state(UKF::State(init_angle));
+    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.generate_sigma_points();
+    const auto& no_wrap_sigma_points = ukf.get_sigma_points();
+
+    REQUIRE(UKF::NUM_SIGMA_POINTS == 3);
+    REQUIRE(no_wrap_sigma_points.size() == UKF::NUM_SIGMA_POINTS);
+    CHECK(no_wrap_sigma_points[0].theta() == Approx(init_angle));
+    CHECK(no_wrap_sigma_points[1].theta() ==
+          Approx(init_angle + std::sqrt(2.0)));
+    CHECK(no_wrap_sigma_points[2].theta() ==
+          Approx(init_angle - std::sqrt(2.0)));
+
+    // Wrapping
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    init_angle = M_PI - 0.1; // radians
+    ukf.set_state(UKF::State(init_angle));
     ukf.set_state_covariance(UKF::N_by_N::Identity());
     ukf.generate_sigma_points();
     const auto& sigma_points = ukf.get_sigma_points();
 
     REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
-    CHECK(sigma_points[0].theta() == Approx(1.0));
-    CHECK(sigma_points[1].theta() == Approx(2.0));
-    CHECK(sigma_points[2].theta() == Approx(0.0));
+    CHECK(sigma_points[0].theta() == Approx(init_angle));
+    CHECK(sigma_points[1].theta() ==
+          Approx(init_angle + std::sqrt(2.0) - 2 * M_PI));
+    CHECK(sigma_points[2].theta() == Approx(init_angle - std::sqrt(2.0)));
   }
 }
 
@@ -225,39 +245,42 @@ TEST_CASE("Predict")
       CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
     }
 
-    // SECTION("Nonlinear system model")
-    // {
-    //   UKF ukf;
+    SECTION("Nonlinear system model")
+    {
+      UKF ukf;
 
-    //   ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-    //   ukf.set_state(UKF::State(1, 2, 3));
-    //   ukf.set_state_covariance(UKF::N_by_N::Identity());
-    //   ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+      ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+      ukf.set_state(UKF::State(1, 2, 3));
+      ukf.set_state_covariance(UKF::N_by_N::Identity());
+      ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-    //   // System model adds one to all state elements
-    //   auto sys_model = [](UKF::State& state) {
-    //     state += UKF::State::Ones();
-    //   };
+      // System model has a product with state components
+      auto sys_model = [](UKF::State& state) {
+        const auto state_in = state;
+        state(0) += 0.1 * state_in(1);
+        state(1) += 1.0;
+        state(2) += 0.01 * state_in(0) * state_in(1);
+      };
 
-    //   ukf.predict(sys_model);
+      ukf.predict(sys_model);
 
-    //   const auto& state = ukf.get_state();
-    //   const auto& cov = ukf.get_state_covariance();
+      const auto& state = ukf.get_state();
+      const auto& cov = ukf.get_state_covariance();
 
-    //   CHECK(state.x() == Approx(2.0));
-    //   CHECK(state.y() == Approx(3.0));
-    //   CHECK(state.z() == Approx(4.0));
+      CHECK(state.x() == Approx(1.2));
+      CHECK(state.y() == Approx(3.0));
+      CHECK(state.z() == Approx(3.02));
 
-    //   CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
-    //   CHECK(cov(0, 1) == Approx(0.0));
-    //   CHECK(cov(0, 2) == Approx(0.0));
-    //   CHECK(cov(1, 0) == Approx(0.0));
-    //   CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
-    //   CHECK(cov(1, 2) == Approx(0.0));
-    //   CHECK(cov(2, 0) == Approx(0.0));
-    //   CHECK(cov(2, 1) == Approx(0.0));
-    //   CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
-    // }
+      CHECK(cov(0, 0) == Approx(1.0 + 1e-3 + 0.01));
+      CHECK(cov(0, 1) == Approx(0.1));
+      CHECK(cov(0, 2) == Approx(0.021));
+      CHECK(cov(1, 0) == Approx(0.1));
+      CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+      CHECK(cov(1, 2) == Approx(0.01));
+      CHECK(cov(2, 0) == Approx(0.021));
+      CHECK(cov(2, 1) == Approx(0.01));
+      CHECK(cov(2, 2) == Approx(1.0 + 1e-3 + 0.0005));
+    }
   }
 }
 
