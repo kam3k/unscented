@@ -130,4 +130,214 @@ TEST_CASE("Weights")
     }
   }
 }
+
+TEST_CASE("Sigma points")
+{
+  SECTION("State is a vector space")
+  {
+    using UKF32 = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
+    UKF32 ukf;
+
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.set_state(UKF32::State(1, 2, 3));
+    ukf.set_state_covariance(UKF32::N_by_N::Identity());
+    ukf.generate_sigma_points();
+    const auto& sigma_points = ukf.get_sigma_points();
+
+    REQUIRE(sigma_points.size() == UKF32::NUM_SIGMA_POINTS);
+    CHECK(sigma_points[0].x() == Approx(1.0));
+    CHECK(sigma_points[0].y() == Approx(2.0));
+    CHECK(sigma_points[0].z() == Approx(3.0));
+    CHECK(sigma_points[1].x() == Approx(3.0));
+    CHECK(sigma_points[1].y() == Approx(2.0));
+    CHECK(sigma_points[1].z() == Approx(3.0));
+    CHECK(sigma_points[2].x() == Approx(1.0));
+    CHECK(sigma_points[2].y() == Approx(4.0));
+    CHECK(sigma_points[2].z() == Approx(3.0));
+    CHECK(sigma_points[3].x() == Approx(1.0));
+    CHECK(sigma_points[3].y() == Approx(2.0));
+    CHECK(sigma_points[3].z() == Approx(5.0));
+    CHECK(sigma_points[4].x() == Approx(-1.0));
+    CHECK(sigma_points[4].y() == Approx(2.0));
+    CHECK(sigma_points[4].z() == Approx(3.0));
+    CHECK(sigma_points[5].x() == Approx(1.0));
+    CHECK(sigma_points[5].y() == Approx(0.0));
+    CHECK(sigma_points[5].z() == Approx(3.0));
+    CHECK(sigma_points[6].x() == Approx(1.0));
+    CHECK(sigma_points[6].y() == Approx(2.0));
+    CHECK(sigma_points[6].z() == Approx(1.0));
+  }
+
+  SECTION("State is not a vector space")
+  {
+    // struct Angle
+    // {
+    //   Angle() = default;
+
+    //   Angle(double a, double b) : a(a), b(b)
+    //   {
+    //   }
+
+    //   explicit Angle(double theta)
+    //   {
+    //     a = std::cos(theta);
+    //     b = std::sin(theta);
+    //   }
+
+    //   double angle() const
+    //   {
+    //     return std::atan2(b, a);
+    //   }
+
+    //   double a = 0.0;
+    //   double b = 0.0;
+    // };
+
+    // Angle operator+(const Angle& lhs, const Angle& rhs)
+    // {
+    //   return {lhs.angle() + rhs.angle()};
+    // }
+
+    // double operator-(const Angle& lhs, const Angle& rhs)
+    // {
+    //   return Angle(rhs.angle() - lhs.angle()).angle();
+    // }
+
+    // Angle operator*(const Angle& angle, double scale)
+    // {
+    //   return {scale * angle.a, scale * angle.b};
+    // }
+  }
+}
+
+TEST_CASE("Predict")
+{
+  SECTION("State is a vector space")
+  {
+    using UKF32 = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
+
+    SECTION("Linear system model")
+    {
+      UKF32 ukf;
+
+      ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+      ukf.set_state(UKF32::State(1, 2, 3));
+      ukf.set_state_covariance(UKF32::N_by_N::Identity());
+      ukf.set_process_covariance(UKF32::N_by_N::Identity() * 1e-3);
+
+      // System model adds one to all state elements
+      auto sys_model = [](UKF32::State& state) {
+        state += UKF32::State::Ones();
+      };
+
+      ukf.predict(sys_model);
+
+      const auto& state = ukf.get_state();
+      const auto& cov = ukf.get_state_covariance();
+
+      CHECK(state.x() == Approx(2.0));
+      CHECK(state.y() == Approx(3.0));
+      CHECK(state.z() == Approx(4.0));
+
+      CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
+      CHECK(cov(0, 1) == Approx(0.0));
+      CHECK(cov(0, 2) == Approx(0.0));
+      CHECK(cov(1, 0) == Approx(0.0));
+      CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+      CHECK(cov(1, 2) == Approx(0.0));
+      CHECK(cov(2, 0) == Approx(0.0));
+      CHECK(cov(2, 1) == Approx(0.0));
+      CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
+    }
+
+    // SECTION("Nonlinear system model")
+    // {
+    //   UKF32 ukf;
+
+    //   ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    //   ukf.set_state(UKF32::State(1, 2, 3));
+    //   ukf.set_state_covariance(UKF32::N_by_N::Identity());
+    //   ukf.set_process_covariance(UKF32::N_by_N::Identity() * 1e-3);
+
+    //   // System model adds one to all state elements
+    //   auto sys_model = [](UKF32::State& state) {
+    //     state += UKF32::State::Ones();
+    //   };
+
+    //   ukf.predict(sys_model);
+
+    //   const auto& state = ukf.get_state();
+    //   const auto& cov = ukf.get_state_covariance();
+
+    //   CHECK(state.x() == Approx(2.0));
+    //   CHECK(state.y() == Approx(3.0));
+    //   CHECK(state.z() == Approx(4.0));
+
+    //   CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
+    //   CHECK(cov(0, 1) == Approx(0.0));
+    //   CHECK(cov(0, 2) == Approx(0.0));
+    //   CHECK(cov(1, 0) == Approx(0.0));
+    //   CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+    //   CHECK(cov(1, 2) == Approx(0.0));
+    //   CHECK(cov(2, 0) == Approx(0.0));
+    //   CHECK(cov(2, 1) == Approx(0.0));
+    //   CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
+    // }
+  }
+}
+
+// SECTION("Custom state mean function")
+// {
+//   UKF32 ukf;
+
+//   // Custom state mean function clips the z value of the state to be
+//   // between 0 and 1
+//   auto custom_state_mean_func = [](const UKF32::SigmaPoints& states,
+//                                    const UKF32::SigmaWeights& weights) {
+//     Eigen::Vector3d weighted_state = states[0] * weights[0];
+//     for (std::size_t i = 1; i < states.size(); ++i)
+//     {
+//       weighted_state = weighted_state + states[i] * weights[i];
+//     }
+//     if (weighted_state.z() > 1)
+//     {
+//       weighted_state.z() = 1.0;
+//     }
+//     else if (weighted_state.z() < 0)
+//     {
+//       weighted_state.z() = 0.0;
+//     }
+//     return weighted_state;
+//   };
+//   ukf.set_state_mean_function(custom_state_mean_func);
+
+//   ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+//   ukf.set_state(UKF32::State(1, 2, 0.5));
+//   ukf.set_state_covariance(UKF32::N_by_N::Identity());
+//   ukf.set_process_covariance(UKF32::N_by_N::Identity() * 1e-3);
+
+//   // System model adds one to all state elements
+//   auto sys_model = [](UKF32::State& state) {
+//     state += UKF32::State::Ones();
+//   };
+
+//   ukf.predict(sys_model);
+
+//   const auto& state = ukf.get_state();
+//   const auto& cov = ukf.get_state_covariance();
+
+//   CHECK(state.x() == Approx(2.0));
+//   CHECK(state.y() == Approx(3.0));
+//   CHECK(state.z() == Approx(1.0)); // clipped
+
+//   CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
+//   CHECK(cov(0, 1) == Approx(0.0));
+//   CHECK(cov(0, 2) == Approx(0.0));
+//   CHECK(cov(1, 0) == Approx(0.0));
+//   CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+//   CHECK(cov(1, 2) == Approx(0.0));
+//   CHECK(cov(2, 0) == Approx(0.0));
+//   CHECK(cov(2, 1) == Approx(0.0));
+//   CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
+// }
 } // namespace unscented

@@ -52,6 +52,8 @@ public:
   template <typename MEAS_MODEL, typename... PARAMS>
   void correct(const MEAS_MODEL& meas_model, MEAS meas, PARAMS...);
 
+  void generate_sigma_points();
+
   void set_state(const STATE& state);
 
   void set_state(STATE&& state);
@@ -113,8 +115,6 @@ public:
 
 private:
   void calculate_weights();
-
-  void generate_sigma_points();
 
   STATE x_;
 
