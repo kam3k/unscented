@@ -1,5 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
+#include "unscented/components.hpp"
 #include "unscented/ukf.hpp"
 
 namespace unscented
@@ -22,18 +23,18 @@ TEST_CASE("Static dimensions")
 
 TEST_CASE("Weights")
 {
-  using UKF32 = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
-  UKF32 ukf_32;
+  using UKF = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
+  UKF ukf;
 
   SECTION("Alpha 1, Beta 2, Kappa 0")
   {
-    ukf_32.set_weight_coefficients(1.0, 2.0, 0.0);
+    ukf.set_weight_coefficients(1.0, 2.0, 0.0);
 
-    const auto mean_weights = ukf_32.get_mean_sigma_weights();
-    const auto cov_weights = ukf_32.get_covariance_sigma_weights();
+    const auto mean_weights = ukf.get_mean_sigma_weights();
+    const auto cov_weights = ukf.get_covariance_sigma_weights();
 
-    REQUIRE(mean_weights.size() == UKF32::NUM_SIGMA_POINTS);
-    REQUIRE(cov_weights.size() == UKF32::NUM_SIGMA_POINTS);
+    REQUIRE(mean_weights.size() == UKF::NUM_SIGMA_POINTS);
+    REQUIRE(cov_weights.size() == UKF::NUM_SIGMA_POINTS);
 
     // All mean weights add to 1.0
     const auto mean_total =
@@ -42,7 +43,7 @@ TEST_CASE("Weights")
 
     // Actual values of all mean weights
     CHECK(mean_weights[0] == Approx(0.0));
-    for (auto i = 1; i < UKF32::NUM_SIGMA_POINTS; ++i)
+    for (auto i = 1; i < UKF::NUM_SIGMA_POINTS; ++i)
     {
       CHECK(mean_weights[1] == Approx(1.0 / 6.0));
     }
@@ -54,7 +55,7 @@ TEST_CASE("Weights")
 
     // Actual values of all cov weights
     CHECK(cov_weights[0] == Approx(2.0));
-    for (auto i = 1; i < UKF32::NUM_SIGMA_POINTS; ++i)
+    for (auto i = 1; i < UKF::NUM_SIGMA_POINTS; ++i)
     {
       CHECK(cov_weights[1] == Approx(1.0 / 6.0));
     }
@@ -62,13 +63,13 @@ TEST_CASE("Weights")
 
   SECTION("Alpha 0.001, Beta 2, Kappa 0")
   {
-    ukf_32.set_weight_coefficients(0.001, 2.0, 0.0);
+    ukf.set_weight_coefficients(0.001, 2.0, 0.0);
 
-    const auto mean_weights = ukf_32.get_mean_sigma_weights();
-    const auto cov_weights = ukf_32.get_covariance_sigma_weights();
+    const auto mean_weights = ukf.get_mean_sigma_weights();
+    const auto cov_weights = ukf.get_covariance_sigma_weights();
 
-    REQUIRE(mean_weights.size() == UKF32::NUM_SIGMA_POINTS);
-    REQUIRE(cov_weights.size() == UKF32::NUM_SIGMA_POINTS);
+    REQUIRE(mean_weights.size() == UKF::NUM_SIGMA_POINTS);
+    REQUIRE(cov_weights.size() == UKF::NUM_SIGMA_POINTS);
 
     // All mean weights add to 1.0
     const auto mean_total =
@@ -77,7 +78,7 @@ TEST_CASE("Weights")
 
     // Actual values of all mean weights
     CHECK(mean_weights[0] == Approx(-999999.0));
-    for (auto i = 1; i < UKF32::NUM_SIGMA_POINTS; ++i)
+    for (auto i = 1; i < UKF::NUM_SIGMA_POINTS; ++i)
     {
       CHECK(mean_weights[1] == Approx(1000000.0 / 6.0));
     }
@@ -89,7 +90,7 @@ TEST_CASE("Weights")
 
     // Actual values of all cov weights
     CHECK(cov_weights[0] == Approx(-999999.0));
-    for (auto i = 1; i < UKF32::NUM_SIGMA_POINTS; ++i)
+    for (auto i = 1; i < UKF::NUM_SIGMA_POINTS; ++i)
     {
       CHECK(cov_weights[1] == Approx(1000000.0 / 6.0));
     }
@@ -97,13 +98,13 @@ TEST_CASE("Weights")
 
   SECTION("Alpha 1, Beta 1, Kappa 1")
   {
-    ukf_32.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
 
-    const auto mean_weights = ukf_32.get_mean_sigma_weights();
-    const auto cov_weights = ukf_32.get_covariance_sigma_weights();
+    const auto mean_weights = ukf.get_mean_sigma_weights();
+    const auto cov_weights = ukf.get_covariance_sigma_weights();
 
-    REQUIRE(mean_weights.size() == UKF32::NUM_SIGMA_POINTS);
-    REQUIRE(cov_weights.size() == UKF32::NUM_SIGMA_POINTS);
+    REQUIRE(mean_weights.size() == UKF::NUM_SIGMA_POINTS);
+    REQUIRE(cov_weights.size() == UKF::NUM_SIGMA_POINTS);
 
     // All mean weights add to 1.0
     const auto mean_total =
@@ -112,7 +113,7 @@ TEST_CASE("Weights")
 
     // Actual values of all mean weights
     CHECK(mean_weights[0] == Approx(0.25));
-    for (auto i = 1; i < UKF32::NUM_SIGMA_POINTS; ++i)
+    for (auto i = 1; i < UKF::NUM_SIGMA_POINTS; ++i)
     {
       CHECK(mean_weights[1] == Approx(0.75 / 6.0));
     }
@@ -124,7 +125,7 @@ TEST_CASE("Weights")
 
     // Actual values of all cov weights
     CHECK(cov_weights[0] == Approx(1.25));
-    for (auto i = 1; i < UKF32::NUM_SIGMA_POINTS; ++i)
+    for (auto i = 1; i < UKF::NUM_SIGMA_POINTS; ++i)
     {
       CHECK(cov_weights[1] == Approx(0.75 / 6.0));
     }
@@ -135,16 +136,16 @@ TEST_CASE("Sigma points")
 {
   SECTION("State is a vector space")
   {
-    using UKF32 = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
-    UKF32 ukf;
+    using UKF = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
+    UKF ukf;
 
     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-    ukf.set_state(UKF32::State(1, 2, 3));
-    ukf.set_state_covariance(UKF32::N_by_N::Identity());
+    ukf.set_state(UKF::State(1, 2, 3));
+    ukf.set_state_covariance(UKF::N_by_N::Identity());
     ukf.generate_sigma_points();
     const auto& sigma_points = ukf.get_sigma_points();
 
-    REQUIRE(sigma_points.size() == UKF32::NUM_SIGMA_POINTS);
+    REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
     CHECK(sigma_points[0].x() == Approx(1.0));
     CHECK(sigma_points[0].y() == Approx(2.0));
     CHECK(sigma_points[0].z() == Approx(3.0));
@@ -170,43 +171,19 @@ TEST_CASE("Sigma points")
 
   SECTION("State is not a vector space")
   {
-    // struct Angle
-    // {
-    //   Angle() = default;
+    using UKF = UKF<Angle, 1, Angle, 1>;
+    UKF ukf;
 
-    //   Angle(double a, double b) : a(a), b(b)
-    //   {
-    //   }
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.set_state(UKF::State(1.0));
+    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.generate_sigma_points();
+    const auto& sigma_points = ukf.get_sigma_points();
 
-    //   explicit Angle(double theta)
-    //   {
-    //     a = std::cos(theta);
-    //     b = std::sin(theta);
-    //   }
-
-    //   double angle() const
-    //   {
-    //     return std::atan2(b, a);
-    //   }
-
-    //   double a = 0.0;
-    //   double b = 0.0;
-    // };
-
-    // Angle operator+(const Angle& lhs, const Angle& rhs)
-    // {
-    //   return {lhs.angle() + rhs.angle()};
-    // }
-
-    // double operator-(const Angle& lhs, const Angle& rhs)
-    // {
-    //   return Angle(rhs.angle() - lhs.angle()).angle();
-    // }
-
-    // Angle operator*(const Angle& angle, double scale)
-    // {
-    //   return {scale * angle.a, scale * angle.b};
-    // }
+    REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
+    CHECK(sigma_points[0].theta() == Approx(1.0));
+    CHECK(sigma_points[1].theta() == Approx(2.0));
+    CHECK(sigma_points[2].theta() == Approx(0.0));
   }
 }
 
@@ -214,21 +191,19 @@ TEST_CASE("Predict")
 {
   SECTION("State is a vector space")
   {
-    using UKF32 = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
+    using UKF = UKF<Eigen::Vector3d, 3, Eigen::Vector2d, 2>;
 
     SECTION("Linear system model")
     {
-      UKF32 ukf;
+      UKF ukf;
 
       ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-      ukf.set_state(UKF32::State(1, 2, 3));
-      ukf.set_state_covariance(UKF32::N_by_N::Identity());
-      ukf.set_process_covariance(UKF32::N_by_N::Identity() * 1e-3);
+      ukf.set_state(UKF::State(1, 2, 3));
+      ukf.set_state_covariance(UKF::N_by_N::Identity());
+      ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
       // System model adds one to all state elements
-      auto sys_model = [](UKF32::State& state) {
-        state += UKF32::State::Ones();
-      };
+      auto sys_model = [](UKF::State& state) { state += UKF::State::Ones(); };
 
       ukf.predict(sys_model);
 
@@ -252,16 +227,16 @@ TEST_CASE("Predict")
 
     // SECTION("Nonlinear system model")
     // {
-    //   UKF32 ukf;
+    //   UKF ukf;
 
     //   ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-    //   ukf.set_state(UKF32::State(1, 2, 3));
-    //   ukf.set_state_covariance(UKF32::N_by_N::Identity());
-    //   ukf.set_process_covariance(UKF32::N_by_N::Identity() * 1e-3);
+    //   ukf.set_state(UKF::State(1, 2, 3));
+    //   ukf.set_state_covariance(UKF::N_by_N::Identity());
+    //   ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
     //   // System model adds one to all state elements
-    //   auto sys_model = [](UKF32::State& state) {
-    //     state += UKF32::State::Ones();
+    //   auto sys_model = [](UKF::State& state) {
+    //     state += UKF::State::Ones();
     //   };
 
     //   ukf.predict(sys_model);
@@ -288,12 +263,12 @@ TEST_CASE("Predict")
 
 // SECTION("Custom state mean function")
 // {
-//   UKF32 ukf;
+//   UKF ukf;
 
 //   // Custom state mean function clips the z value of the state to be
 //   // between 0 and 1
-//   auto custom_state_mean_func = [](const UKF32::SigmaPoints& states,
-//                                    const UKF32::SigmaWeights& weights) {
+//   auto custom_state_mean_func = [](const UKF::SigmaPoints& states,
+//                                    const UKF::SigmaWeights& weights) {
 //     Eigen::Vector3d weighted_state = states[0] * weights[0];
 //     for (std::size_t i = 1; i < states.size(); ++i)
 //     {
@@ -312,13 +287,13 @@ TEST_CASE("Predict")
 //   ukf.set_state_mean_function(custom_state_mean_func);
 
 //   ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//   ukf.set_state(UKF32::State(1, 2, 0.5));
-//   ukf.set_state_covariance(UKF32::N_by_N::Identity());
-//   ukf.set_process_covariance(UKF32::N_by_N::Identity() * 1e-3);
+//   ukf.set_state(UKF::State(1, 2, 0.5));
+//   ukf.set_state_covariance(UKF::N_by_N::Identity());
+//   ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
 //   // System model adds one to all state elements
-//   auto sys_model = [](UKF32::State& state) {
-//     state += UKF32::State::Ones();
+//   auto sys_model = [](UKF::State& state) {
+//     state += UKF::State::Ones();
 //   };
 
 //   ukf.predict(sys_model);
