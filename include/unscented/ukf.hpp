@@ -136,6 +136,29 @@ void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::correct(
 
 template <typename STATE, std::size_t STATE_DOF, typename MEAS,
           std::size_t MEAS_DOF>
+void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::generate_sigma_points()
+{
+  // Calculate the (weighted) matrix square root of the state covariance
+  // matrix
+  cholesky_.compute(P_);
+  const N_by_N& sqrt_P = eta_ * cholesky_.matrixL().toDenseMatrix();
+
+  // First sigma point is the current state mean
+  sigma_points_[0] = x_;
+
+  // Next N sigma points are the current state mean perturbed by the columns
+  // of sqrt_P, and the N sigma points after that are the same perturbations
+  // but negated
+  for (std::size_t i = 0; i < N; ++i)
+  {
+    const N_by_1& perturb = sqrt_P.col(i);
+    sigma_points_[i + 1] = x_ + STATE(perturb);
+    sigma_points_[N + i + 1] = x_ + STATE(-perturb);
+  }
+}
+
+template <typename STATE, std::size_t STATE_DOF, typename MEAS,
+          std::size_t MEAS_DOF>
 void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::set_state(const STATE& state)
 {
   x_ = state;
@@ -363,29 +386,6 @@ const typename UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::MeasurementMeanFunction&
 UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::get_measurement_mean_function() const
 {
   return meas_mean_function_;
-}
-
-template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-          std::size_t MEAS_DOF>
-void UKF<STATE, STATE_DOF, MEAS, MEAS_DOF>::generate_sigma_points()
-{
-  // Calculate the (weighted) matrix square root of the state covariance
-  // matrix
-  cholesky_.compute(P_);
-  const N_by_N& sqrt_P = eta_ * cholesky_.matrixL().toDenseMatrix();
-
-  // First sigma point is the current state mean
-  sigma_points_[0] = x_;
-
-  // Next N sigma points are the current state mean perturbed by the columns
-  // of sqrt_P, and the N sigma points after that are the same perturbations
-  // but negated
-  for (std::size_t i = 0; i < N; ++i)
-  {
-    const N_by_1& perturb = sqrt_P.col(i);
-    sigma_points_[i + 1] = x_ + STATE(perturb);
-    sigma_points_[N + i + 1] = x_ + STATE(-perturb);
-  }
 }
 
 template <typename STATE, std::size_t STATE_DOF, typename MEAS,
