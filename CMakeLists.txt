@@ -26,6 +26,6 @@ target_link_libraries(robot_localization_2d unscented)
 
 # Tests
 enable_testing()
-add_executable(test_unscented test/test_unscented.cpp) 
-target_link_libraries(test_unscented unscented)
-add_test(NAME test_unscented COMMAND test_unscented)
+add_executable(test_ukf test/test_ukf.cpp) 
+target_link_libraries(test_ukf unscented)
+add_test(NAME test_ukf COMMAND test_ukf)

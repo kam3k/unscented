@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "unscented.hpp"
+#include "unscented/ukf.hpp"
 
 namespace unscented
 {
