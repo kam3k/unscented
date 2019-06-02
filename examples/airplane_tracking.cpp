@@ -1,4 +1,5 @@
 #include "unscented/ukf.hpp"
+#include "unscented/components.hpp"
 
 #include "matplotlibcpp.h"
 
@@ -8,35 +9,14 @@
 namespace plt = matplotlibcpp;
 
 ///////////////////////////////////////////////////////////////////////////////
-// Utility functions
-///////////////////////////////////////////////////////////////////////////////
-
-/**
- * @brief Given an angle in radians, wraps it to [-pi, pi)
- *
- * @param[in] angle
- *
- * @return Angle wrapped to range [-pi, pi)
- */
-double wrap_angle(double angle)
-{
-  angle = fmod(angle + M_PI, 2 * M_PI);
-  if (angle < 0.0)
-  {
-    angle += 2 * M_PI;
-  }
-  return angle - M_PI;
-}
-
-///////////////////////////////////////////////////////////////////////////////
 // State and system model
 ///////////////////////////////////////////////////////////////////////////////
 
 /** State is simple a 4-vector */
-using AirplaneState = Eigen::Vector4d;
+using AirplaneState = unscented::Vector4;
 
-/** The elements of the state vector */
-enum StateElements
+/** The components of the state vector */
+enum StateComponents
 {
   POSITION = 0,
   VELOCITY,
@@ -55,8 +35,12 @@ enum StateElements
 void system_model(AirplaneState& state, double dt)
 {
   Eigen::Matrix4d F;
-  F << 1.0, dt, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, dt, 0.0, 0.0, 0.0,
-      1.0;
+  // clang-format off
+  F << 1.0,  dt, 0.0, 0.0, 
+       0.0, 1.0, 0.0, 0.0, 
+       0.0, 0.0, 1.0,  dt, 
+       0.0, 0.0, 0.0, 1.0;
+  // clang-format on
   state = F * state;
 }
 
@@ -69,14 +53,42 @@ void system_model(AirplaneState& state, double dt)
  */
 struct RadarMeasurement
 {
+  /** The number of degrees of freedom of this measurement (required by the
+   * filter) */
+  static constexpr std::size_t DOF = 2;
+
   /**
    * @brief Default constructor (required by filter)
    */
   RadarMeasurement() = default;
 
   /**
-   * @brief Constructor populating range and elevation (not required by filter,
-   * included for convenience)
+   * @brief Construct taking a vector with dimension the same as the DOF
+   * (required by filter)
+   *
+   * @param[in] vec Vector containing range and elevation of the radar
+   * measurement
+   */
+  explicit RadarMeasurement(const unscented::Vector2& vec)
+    : range(vec(0)), elevation(vec(1))
+  {
+  }
+
+  /**
+   * @brief Constructor populating range and elevation (not required
+   * by filter, included for convenience)
+   *
+   * @param[in] r Measured range to airplane
+   * @param[in] e Measured elevation of airplane
+   */
+  RadarMeasurement(double r, const unscented::UnitComplex& e)
+    : range(r), elevation(e)
+  {
+  }
+
+  /**
+   * @brief Constructor populating range and elevation as a double (not required
+   * by filter, included for convenience)
    *
    * @param[in] r Measured range to airplane
    * @param[in] e Measured elevation of airplane
@@ -86,28 +98,26 @@ struct RadarMeasurement
   }
 
   /** Range to airplane */
-  double range;
+  double range{0.0};
 
   /** Elevation of airplane */
-  double elevation;
+  unscented::UnitComplex elevation{0.0};
 };
 
 /**
- * @brief Adds two measurements together and produces another measurement. This
- * is required by the filter unless a custom measurement mean function is
- * provided.
+ * @brief Adds two measurements together and produces another measurement
+ * (required by the filter).
  *
  * @param[in] lhs
  * @param[in] rhs
  *
- * @return Sum of two measurements, carefully wrapping the summed elevation if
- * necessary
+ * @return Sum of two measurements, automatically handles wrapping of elevation
+ * due to use of a unit complex number to represent it
  */
 RadarMeasurement operator+(const RadarMeasurement& lhs,
                            const RadarMeasurement& rhs)
 {
-  return RadarMeasurement(lhs.range + rhs.range,
-                          wrap_angle(lhs.elevation + rhs.elevation));
+  return RadarMeasurement(lhs.range + rhs.range, lhs.elevation + rhs.elevation);
 }
 
 /**
@@ -118,28 +128,32 @@ RadarMeasurement operator+(const RadarMeasurement& lhs,
  * @param[in] lhs
  * @param[in] rhs
  *
- * @return Difference of two measurements in a vector, carefully wrapping the
- * elevation difference if necessary
+ * @return Difference of two measurements in a vector, automatically handles
+ * wrapping of elevation angle due to use of a unit complex number to represent
+ * it
  */
-Eigen::Vector2d operator-(const RadarMeasurement& lhs,
-                          const RadarMeasurement& rhs)
+unscented::Vector2 operator-(const RadarMeasurement& lhs,
+                             const RadarMeasurement& rhs)
 {
-  return Eigen::Vector2d(lhs.range - rhs.range,
-                         wrap_angle(lhs.elevation - rhs.elevation));
+  return unscented::Vector2(lhs.range - rhs.range,
+                            (lhs.elevation - rhs.elevation)(0));
 }
 
-/**
- * @brief Multiples a measurement by a scale factor. This is required by the
- * filter unless a custom measurement mean function is provided.
- *
- * @param[in] meas
- * @param[in] scale
- *
- * @return A scaled measurement
- */
-RadarMeasurement operator*(const RadarMeasurement& meas, double scale)
+template <std::size_t NUM_SIGMA_POINTS>
+RadarMeasurement radar_measurement_mean_function(
+    const std::array<RadarMeasurement, NUM_SIGMA_POINTS>& states,
+    const std::array<double, NUM_SIGMA_POINTS>& weights)
 {
-  return RadarMeasurement(meas.range * scale, meas.elevation * scale);
+  double range{0.0};
+  double a{0.0};
+  double b{0.0};
+  for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
+  {
+    range += weights[i] * states[i].range;
+    a += weights[i] * states[i].elevation.a;
+    b += weights[i] * states[i].elevation.b;
+  }
+  return RadarMeasurement(range, unscented::UnitComplex(a, b));
 }
 
 /**
@@ -157,7 +171,7 @@ RadarMeasurement measurement_model(const AirplaneState& state)
   const auto range =
       std::sqrt(std::pow(state[POSITION], 2) + std::pow(state[ALTITUDE], 2));
   const auto elevation = std::atan2(state[ALTITUDE], state[POSITION]);
-  return {range, elevation};
+  return RadarMeasurement(range, elevation);
 }
 
 int main()
@@ -169,8 +183,9 @@ int main()
   // The airplane state has four degrees of freedom (position, velocity,
   // altitude, climb rate) and the radar measurement has two degrees of freedom
   // (range, elevation)
-  using UKF = unscented::UKF<AirplaneState, 4, RadarMeasurement, 2>;
-  UKF ukf;
+  using UKF = unscented::UKF<AirplaneState, RadarMeasurement>;
+  UKF ukf(unscented::vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
+          radar_measurement_mean_function<UKF::NUM_SIGMA_POINTS>);
 
   // Simulation parameters
   const auto SIM_DURATION = 360.0; // seconds
@@ -183,8 +198,8 @@ int main()
   const auto PROCESS_VAR = 0.1;
   Eigen::Vector2d G(0.5 * DT * DT, DT);
   Eigen::Matrix4d Q;
-  Q.block(0, 0, 1, 1) = G * G.transpose() * PROCESS_VAR;
-  Q.block(2, 2, 3, 3) = G * G.transpose() * PROCESS_VAR;
+  Q.block<2, 2>(0, 0) = G * G.transpose() * PROCESS_VAR;
+  Q.block<2, 2>(2, 2) = G * G.transpose() * PROCESS_VAR;
   ukf.set_process_covariance(Q);
 
   // Calculate measurement noise covariance R (standard deviations chosen
@@ -247,7 +262,8 @@ int main()
     // Simulate a measurement based on the true state
     auto meas = measurement_model(true_state);
     meas.range += range_noise(gen);
-    meas.elevation += elevation_noise(gen);
+    meas.elevation =
+        unscented::UnitComplex(meas.elevation.angle() + elevation_noise(gen));
 
     // Update the filter estimates
     ukf.predict(system_model, DT);

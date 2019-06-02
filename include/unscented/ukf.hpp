@@ -27,6 +27,7 @@ UKF<STATE, MEAS>::UKF(StateMeanFunction state_mean_function,
   , state_mean_function_(std::move(state_mean_function))
   , meas_mean_function_(std::move(meas_mean_function))
 {
+  calculate_weights();
 }
 
 template <typename STATE, typename MEAS>
