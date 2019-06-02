@@ -1,5 +1,5 @@
-#include "unscented/ukf.hpp"
 #include "unscented/components.hpp"
+#include "unscented/ukf.hpp"
 
 #include "matplotlibcpp.h"
 
@@ -13,7 +13,7 @@ namespace plt = matplotlibcpp;
 ///////////////////////////////////////////////////////////////////////////////
 
 /** State is simple a 4-vector */
-using AirplaneState = unscented::Vector4;
+using AirplaneState = unscented::Vector<4>;
 
 /** The components of the state vector */
 enum StateComponents
@@ -69,7 +69,7 @@ struct RadarMeasurement
    * @param[in] vec Vector containing range and elevation of the radar
    * measurement
    */
-  explicit RadarMeasurement(const unscented::Vector2& vec)
+  explicit RadarMeasurement(const unscented::Vector<2>& vec)
     : range(vec(0)), elevation(vec(1))
   {
   }
@@ -132,11 +132,11 @@ RadarMeasurement operator+(const RadarMeasurement& lhs,
  * wrapping of elevation angle due to use of a unit complex number to represent
  * it
  */
-unscented::Vector2 operator-(const RadarMeasurement& lhs,
-                             const RadarMeasurement& rhs)
+unscented::Vector<2> operator-(const RadarMeasurement& lhs,
+                               const RadarMeasurement& rhs)
 {
-  return unscented::Vector2(lhs.range - rhs.range,
-                            (lhs.elevation - rhs.elevation)(0));
+  return unscented::Vector<2>(lhs.range - rhs.range,
+                              (lhs.elevation - rhs.elevation)(0));
 }
 
 template <std::size_t NUM_SIGMA_POINTS>
@@ -184,7 +184,7 @@ int main()
   // altitude, climb rate) and the radar measurement has two degrees of freedom
   // (range, elevation)
   using UKF = unscented::UKF<AirplaneState, RadarMeasurement>;
-  UKF ukf(unscented::vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
+  UKF ukf(unscented::mean_function<AirplaneState, UKF::NUM_SIGMA_POINTS>,
           radar_measurement_mean_function<UKF::NUM_SIGMA_POINTS>);
 
   // Simulation parameters

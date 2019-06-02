@@ -2,26 +2,22 @@
 
 namespace unscented
 {
-///////////////////////////////////////////////////////////////////////////////
-// Vectors
-///////////////////////////////////////////////////////////////////////////////
-template <std::size_t DIM, std::size_t NUM_VECS>
-Eigen::Matrix<double, DIM, 1> vector_mean_function(
-    const std::array<Eigen::Matrix<double, DIM, 1>, NUM_VECS>& vectors,
-    const std::array<double, NUM_VECS>& weights)
+template <typename COMPONENT, std::size_t ARRAY_SIZE>
+COMPONENT mean_function(const std::array<COMPONENT, ARRAY_SIZE>& components,
+                        const std::array<double, ARRAY_SIZE>& weights)
 {
-  Eigen::Matrix<double, DIM, 1> mean_vector;
-  for (std::size_t i = 0; i < NUM_VECS; ++i)
+  COMPONENT mean_component;
+  for (std::size_t i = 0; i < ARRAY_SIZE; ++i)
   {
-    mean_vector += vectors[i] * weights[i];
+    mean_component = mean_component + components[i] * weights[i];
   }
-  return mean_vector;
+  return mean_component;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 // UnitComplex
 ///////////////////////////////////////////////////////////////////////////////
-UnitComplex::UnitComplex(const Vector1& vec) : UnitComplex(vec(0))
+UnitComplex::UnitComplex(const Vector<1>& vec) : UnitComplex(vec(0))
 {
 }
 
@@ -52,9 +48,9 @@ UnitComplex operator+(const UnitComplex& lhs, const UnitComplex& rhs)
   return UnitComplex(lhs.angle() + rhs.angle());
 }
 
-Vector1 operator-(const UnitComplex& lhs, const UnitComplex& rhs)
+Vector<1> operator-(const UnitComplex& lhs, const UnitComplex& rhs)
 {
-  return Vector1(UnitComplex(rhs.angle() - lhs.angle()).angle());
+  return Vector<1>(UnitComplex(rhs.angle() - lhs.angle()).angle());
 }
 
 UnitComplex unit_complex_mean_function(

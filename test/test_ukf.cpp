@@ -7,13 +7,13 @@ namespace unscented
 {
 TEST_CASE("Static dimensions")
 {
-  using UKF_32 = UKF<Vector3, Vector2>;
+  using UKF_32 = UKF<Vector<3>, Vector<2>>;
 
   CHECK(UKF_32::N == 3);
   CHECK(UKF_32::M == 2);
   CHECK(UKF_32::NUM_SIGMA_POINTS == 7);
 
-  using UKF_96 = UKF<Vector9, Vector6>;
+  using UKF_96 = UKF<Vector<9>, Vector<6>>;
 
   CHECK(UKF_96::N == 9);
   CHECK(UKF_96::M == 6);
@@ -58,9 +58,9 @@ TEST_CASE("Static dimensions")
 
 TEST_CASE("Weights")
 {
-  using UKF = UKF<Vector3, Vector2>;
-  UKF ukf(vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
-          vector_mean_function<UKF::M, UKF::NUM_SIGMA_POINTS>);
+  using UKF = UKF<Vector<3>, Vector<2>>;
+  UKF ukf(mean_function<Vector<3>, UKF::NUM_SIGMA_POINTS>,
+          mean_function<Vector<2>, UKF::NUM_SIGMA_POINTS>);
 
   SECTION("Alpha 1, Beta 2, Kappa 0")
   {
@@ -172,9 +172,9 @@ TEST_CASE("Sigma points")
 {
   SECTION("State is a vector space")
   {
-    using UKF = UKF<Vector3, Vector2>;
-    UKF ukf(vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
-            vector_mean_function<UKF::M, UKF::NUM_SIGMA_POINTS>);
+    using UKF = UKF<Vector<3>, Vector<2>>;
+    UKF ukf(mean_function<Vector<3>, UKF::NUM_SIGMA_POINTS>,
+            mean_function<Vector<2>, UKF::NUM_SIGMA_POINTS>);
 
     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
     ukf.set_state(UKF::State(1, 2, 3));
@@ -248,9 +248,9 @@ TEST_CASE("Predict")
 {
   SECTION("State is a vector space")
   {
-    using UKF = UKF<Vector3, Vector2>;
-    UKF ukf(vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
-            vector_mean_function<UKF::M, UKF::NUM_SIGMA_POINTS>);
+    using UKF = UKF<Vector<3>, Vector<2>>;
+    UKF ukf(mean_function<Vector<3>, UKF::NUM_SIGMA_POINTS>,
+            mean_function<Vector<2>, UKF::NUM_SIGMA_POINTS>);
 
     SECTION("Linear system model")
     {
@@ -320,7 +320,7 @@ TEST_CASE("Predict")
 
   // SECTION("State is a not a vector space")
   // {
-  //   using UKF = UKF<Vector3, 3, Vector2, 2>;
+  //   using UKF = UKF<Vector<3>, 3, Vector<2>, 2>;
 
   //   SECTION("Linear system model")
   //   {
