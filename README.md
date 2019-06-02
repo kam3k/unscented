@@ -24,7 +24,7 @@ A Kalman filter (KF) is an algorithm that takes a series of measurements over ti
 
 For example, a KF is well-suited for estimating the state of a car (e.g., its position, speed, turning rate, etc.) by combining measurements from a GPS device, the car's speedometer and steering angle, and a model of how a car moves (e.g., cars do not tend to move laterally, rather they move in the direction their wheels are facing). Combining these elements in a KF provides a better estimate of the car's state than any of the individual measurements.
 
-An unscented Kalman filter (UKF) is a nonlinear extension to the KF that handles problems where the dynamics of the state or the relationship between the measurements and the state are nonlinear. In all but the simplest applications, these nonlinearities exist. In fact, it is rare that KF is implemented in its pure linear form. A tip-of-the-iceberg explanation of UKFs, written to provide an intuitive feel for the algorithm, is [available below](#background).
+An unscented Kalman filter (UKF) is a nonlinear extension to the KF that handles problems where the kinematics or dynamics of the state and/or the relationship between the measurements and the state are nonlinear. In all but the simplest applications, these nonlinearities exist. In fact, it is rare that KF is implemented in its pure linear form. A tip-of-the-iceberg explanation of UKFs, written to provide an intuitive feel for the algorithm, is [available below](#background).
 
 The KF became well known during NASA's Apollo program in the 1960s, where it helped navigate spacecraft on missions to the moon. It has since been used in a plethora of applications; including weather forecasting, autopilot, speech enhancement, vehicle tracking, economics, and [many more](https://en.wikipedia.org/wiki/Kalman_filter#Applications).
 
@@ -34,17 +34,21 @@ The features of *unscented* follow from its goals and motivation for being writt
 
 ##### Flexible
 
-There are no constraints on the mathematical spaces of the state and measurements in *unscented*. Some (many) libraries require the state and measurements to live in vector spaces. On the other hand, with *unscented* the state can be an arbitrary class as long as it includes a few overloaded operators. This allows one to use, for example, a 3D affine transformation for the pose of a vehicle (often parameterised as a 4x4 transformation matrix), or non-minimal representations of rotations, or unit vectors. 
+There are no constraints on the mathematical spaces of the state and measurements in *unscented*. Some (many) libraries require the state and measurements to live in vector spaces. On the other hand, with *unscented* the state and measurements can be any arbitrary type as long as they meet some minimum requirements. This allows one to use, for example, a 3D affine transformation for the pose of a vehicle (often parameterised as a 4x4 transformation matrix), non-minimal representations of rotations, unit vectors, etc. Note that if your state and/or measurements live in a vector space, there is no need to create custom types, one can simply use those provided by the library (which are simply aliases to vectors in Eigen).
 
 Furthermore, *unscented* allows one to easily use multiple system models, multiple measurement models, and custom functions for calculating means (e.g., the average of a bunch of angles isn't their sum divided by the number of angles).
 
+##### Batteries included
+
+In addition to being flexible, *unscented* includes implementations of many standard state and measurement components, with a focus on geometric components. These include different parameterizations for angles, rotations, and affine transformations (in both 2D and 3D). It is hoped that users creating new components will contribute them back to *unscented* so that others can benefit from them.
+
 ##### Expansive API
 
-It is good practice to encapsulate code and only provide a public interface that is required for users to make use of a library. That being said, *unscented* opens up its doors a little to allow users to peek at its internals and even modify steps of the UKF. For example, the results of all intermediate calculations are available (e.g., the innovation of the latest measurement and its covariance, the latest sigma points). One can even generate sigma points or manually update the state or its covariance. This promotes using *unscented* as a base for extending the UKF or using it in a research or custom application.
+It is good practice to encapsulate code and only provide a public interface that is required for users to make use of a library. That being said, *unscented* opens up its doors a little to allow users to peek at its internals and even modify steps of the UKF. For example, the results of all intermediate calculations are available (e.g., the innovation of the latest measurement and its covariance, the latest sigma points). One can even generate sigma points or manually update the state or its covariance. This promotes using *unscented* as a base for extending the UKF or using it for research or in a non-standard application.
 
 ##### Well-documented
 
-Software that is clearly written and well documented tends to get used more than other software, even if that other software is more cleverly written, faster, or even has more features. It is a goal of *unscented* to fall firmly in the former category, offering plenty of [examples](#examples), [documentation](#documentation), and a formal API. It is not a goal of *unscented* to be the fastest or smallest implementation, but it should be one of the easiest to use, fix, and contribute to.
+Software that is clearly written and well documented tends to get used more than other software, even if that other software is more cleverly written, faster, or even has more features. It is a goal of *unscented* to fall firmly in the former category, offering plenty of [examples](#examples), [documentation](#documentation), and a formal API. It is not a goal of *unscented* to be the fastest or smallest implementation (although it should be fast enough for the vast majority of applications), but it should be one of the easiest to use, fix, and contribute to. Put differently, unscented was not written for a single use-case for the author, rather it is written to be used by a larger community.
 
 ##### Tested
 
