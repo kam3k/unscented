@@ -14,15 +14,16 @@ find_package(PythonLibs 2.7)
 # Library
 add_library(unscented INTERFACE)
 target_include_directories(unscented INTERFACE include ${EIGEN3_INCLUDE_DIR})
+target_compile_definitions(unscented INTERFACE EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h")
 
 # Airplane tracking example
-add_executable(airplane_tracking examples/airplane_tracking.cpp)
-target_include_directories(airplane_tracking PRIVATE optional ${PYTHON_INCLUDE_DIRS})
-target_link_libraries(airplane_tracking unscented ${PYTHON_LIBRARIES})
+# add_executable(airplane_tracking examples/airplane_tracking.cpp)
+# target_include_directories(airplane_tracking PRIVATE optional ${PYTHON_INCLUDE_DIRS})
+# target_link_libraries(airplane_tracking unscented ${PYTHON_LIBRARIES})
 
 # Robot localization example
-add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
-target_link_libraries(robot_localization_2d unscented)
+# add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
+# target_link_libraries(robot_localization_2d unscented)
 
 # Tests
 enable_testing()

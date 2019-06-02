@@ -4,16 +4,15 @@
 
 namespace unscented
 {
-template <typename STATE, std::size_t STATE_DOF, typename MEAS,
-          std::size_t MEAS_DOF>
+template <typename STATE, typename MEAS>
 class UKF
 {
 public:
-  static constexpr auto N = STATE_DOF;
+  static constexpr std::size_t N = STATE::DOF;
 
-  static constexpr auto M = MEAS_DOF;
+  static constexpr std::size_t M = MEAS::DOF;
 
-  static constexpr auto NUM_SIGMA_POINTS = 2 * N + 1;
+  static constexpr std::size_t NUM_SIGMA_POINTS = 2 * N + 1;
 
   using State = STATE;
 
@@ -41,7 +40,8 @@ public:
   using MeasurementMeanFunction =
       std::function<MEAS(const MeasurementSigmaPoints&, const SigmaWeights&)>;
 
-  UKF();
+  UKF(StateMeanFunction state_mean_function,
+      MeasurementMeanFunction meas_mean_function);
 
   template <typename SYS_MODEL, typename... PARAMS>
   void predict(const SYS_MODEL& system_model, PARAMS...);
@@ -104,12 +104,7 @@ public:
 
   const SigmaWeights& get_covariance_sigma_weights() const;
 
-  void set_state_mean_function(StateMeanFunction state_mean_function);
-
   const StateMeanFunction& get_state_mean_function() const;
-
-  void set_measurement_mean_function(
-      MeasurementMeanFunction meas_mean_function);
 
   const MeasurementMeanFunction& get_measurement_mean_function() const;
 
