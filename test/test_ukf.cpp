@@ -7,17 +7,53 @@ namespace unscented
 {
 TEST_CASE("Static dimensions")
 {
-  using UKF32 = UKF<Vector3, Vector2>;
+  using UKF_32 = UKF<Vector3, Vector2>;
 
-  CHECK(UKF32::N == 3);
-  CHECK(UKF32::M == 2);
-  CHECK(UKF32::NUM_SIGMA_POINTS == 7);
+  CHECK(UKF_32::N == 3);
+  CHECK(UKF_32::M == 2);
+  CHECK(UKF_32::NUM_SIGMA_POINTS == 7);
 
-  using UKF96 = UKF<Vector9, Vector6>;
+  using UKF_96 = UKF<Vector9, Vector6>;
 
-  CHECK(UKF96::N == 9);
-  CHECK(UKF96::M == 6);
-  CHECK(UKF96::NUM_SIGMA_POINTS == 19);
+  CHECK(UKF_96::N == 9);
+  CHECK(UKF_96::M == 6);
+  CHECK(UKF_96::NUM_SIGMA_POINTS == 19);
+
+  using UKF_UnitComplex = UKF<UnitComplex, UnitComplex>;
+
+  CHECK(UKF_UnitComplex::N == 1);
+  CHECK(UKF_UnitComplex::M == 1);
+  CHECK(UKF_UnitComplex::NUM_SIGMA_POINTS == 3);
+
+  using UKF_SO2 = UKF<SO2, SO2>;
+
+  CHECK(UKF_SO2::N == 1);
+  CHECK(UKF_SO2::M == 1);
+  CHECK(UKF_SO2::NUM_SIGMA_POINTS == 3);
+
+  using UKF_SE2 = UKF<SE2, SE2>;
+
+  CHECK(UKF_SE2::N == 3);
+  CHECK(UKF_SE2::M == 3);
+  CHECK(UKF_SE2::NUM_SIGMA_POINTS == 7);
+
+  using UKF_UnitQuaternion = UKF<UnitQuaternion, UnitQuaternion>;
+
+  CHECK(UKF_UnitQuaternion::N == 3);
+  CHECK(UKF_UnitQuaternion::M == 3);
+  CHECK(UKF_UnitQuaternion::NUM_SIGMA_POINTS == 7);
+
+  using UKF_SO3 = UKF<SO3, SO3>;
+
+  CHECK(UKF_SO3::N == 3);
+  CHECK(UKF_SO3::M == 3);
+  CHECK(UKF_SO3::NUM_SIGMA_POINTS == 7);
+
+  using UKF_SE3 = UKF<SE3, SE3>;
+
+  CHECK(UKF_SE3::N == 6);
+  CHECK(UKF_SE3::M == 6);
+  CHECK(UKF_SE3::NUM_SIGMA_POINTS == 13);
 }
 
 TEST_CASE("Weights")
@@ -132,235 +168,231 @@ TEST_CASE("Weights")
   }
 }
 
-// TEST_CASE("Sigma points")
-// {
-//   SECTION("State is a vector space")
-//   {
-//     using UKF = UKF<Vector<3>, 3, Vector<2>, 2>;
-//     UKF ukf;
+TEST_CASE("Sigma points")
+{
+  SECTION("State is a vector space")
+  {
+    using UKF = UKF<Vector3, Vector2>;
+    UKF ukf(vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
+            vector_mean_function<UKF::M, UKF::NUM_SIGMA_POINTS>);
 
-//     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//     ukf.set_state(UKF::State(1, 2, 3));
-//     ukf.set_state_covariance(UKF::N_by_N::Identity());
-//     ukf.generate_sigma_points();
-//     const auto& sigma_points = ukf.get_sigma_points();
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.set_state(UKF::State(1, 2, 3));
+    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.generate_sigma_points();
+    const auto& sigma_points = ukf.get_sigma_points();
 
-//     REQUIRE(UKF::NUM_SIGMA_POINTS == 7);
-//     REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
-//     CHECK(sigma_points[0].x() == Approx(1.0));
-//     CHECK(sigma_points[0].y() == Approx(2.0));
-//     CHECK(sigma_points[0].z() == Approx(3.0));
-//     CHECK(sigma_points[1].x() == Approx(3.0));
-//     CHECK(sigma_points[1].y() == Approx(2.0));
-//     CHECK(sigma_points[1].z() == Approx(3.0));
-//     CHECK(sigma_points[2].x() == Approx(1.0));
-//     CHECK(sigma_points[2].y() == Approx(4.0));
-//     CHECK(sigma_points[2].z() == Approx(3.0));
-//     CHECK(sigma_points[3].x() == Approx(1.0));
-//     CHECK(sigma_points[3].y() == Approx(2.0));
-//     CHECK(sigma_points[3].z() == Approx(5.0));
-//     CHECK(sigma_points[4].x() == Approx(-1.0));
-//     CHECK(sigma_points[4].y() == Approx(2.0));
-//     CHECK(sigma_points[4].z() == Approx(3.0));
-//     CHECK(sigma_points[5].x() == Approx(1.0));
-//     CHECK(sigma_points[5].y() == Approx(0.0));
-//     CHECK(sigma_points[5].z() == Approx(3.0));
-//     CHECK(sigma_points[6].x() == Approx(1.0));
-//     CHECK(sigma_points[6].y() == Approx(2.0));
-//     CHECK(sigma_points[6].z() == Approx(1.0));
-//   }
+    REQUIRE(UKF::NUM_SIGMA_POINTS == 7);
+    REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
+    CHECK(sigma_points[0].x() == Approx(1.0));
+    CHECK(sigma_points[0].y() == Approx(2.0));
+    CHECK(sigma_points[0].z() == Approx(3.0));
+    CHECK(sigma_points[1].x() == Approx(3.0));
+    CHECK(sigma_points[1].y() == Approx(2.0));
+    CHECK(sigma_points[1].z() == Approx(3.0));
+    CHECK(sigma_points[2].x() == Approx(1.0));
+    CHECK(sigma_points[2].y() == Approx(4.0));
+    CHECK(sigma_points[2].z() == Approx(3.0));
+    CHECK(sigma_points[3].x() == Approx(1.0));
+    CHECK(sigma_points[3].y() == Approx(2.0));
+    CHECK(sigma_points[3].z() == Approx(5.0));
+    CHECK(sigma_points[4].x() == Approx(-1.0));
+    CHECK(sigma_points[4].y() == Approx(2.0));
+    CHECK(sigma_points[4].z() == Approx(3.0));
+    CHECK(sigma_points[5].x() == Approx(1.0));
+    CHECK(sigma_points[5].y() == Approx(0.0));
+    CHECK(sigma_points[5].z() == Approx(3.0));
+    CHECK(sigma_points[6].x() == Approx(1.0));
+    CHECK(sigma_points[6].y() == Approx(2.0));
+    CHECK(sigma_points[6].z() == Approx(1.0));
+  }
 
-//   SECTION("State is not a vector space")
-//   {
-//     using UKF = UKF<UnitComplex, 1, UnitComplex, 1>;
-//     UKF ukf;
+  SECTION("State is not a vector space")
+  {
+    using UKF = UKF<UnitComplex, UnitComplex>;
+    UKF ukf(unit_complex_mean_function, unit_complex_mean_function);
 
-//     // Use circular mean for state and measurement mean functions
-//     ukf.set_state_mean_function(mean_function);
-//     ukf.set_measurement_mean_function(mean_function);
+    // No wrapping
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    double init_angle = 1.0; // radians
+    ukf.set_state(UKF::State(init_angle));
+    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.generate_sigma_points();
+    const auto& no_wrap_sigma_points = ukf.get_sigma_points();
 
-//     // No wrapping
-//     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//     double init_angle = 1.0; // radians
-//     ukf.set_state(UKF::State(init_angle));
-//     ukf.set_state_covariance(UKF::N_by_N::Identity());
-//     ukf.generate_sigma_points();
-//     const auto& no_wrap_sigma_points = ukf.get_sigma_points();
+    REQUIRE(UKF::NUM_SIGMA_POINTS == 3);
+    REQUIRE(no_wrap_sigma_points.size() == UKF::NUM_SIGMA_POINTS);
+    CHECK(no_wrap_sigma_points[0].angle() == Approx(init_angle));
+    CHECK(no_wrap_sigma_points[1].angle() ==
+          Approx(init_angle + std::sqrt(2.0)));
+    CHECK(no_wrap_sigma_points[2].angle() ==
+          Approx(init_angle - std::sqrt(2.0)));
 
-//     REQUIRE(UKF::NUM_SIGMA_POINTS == 3);
-//     REQUIRE(no_wrap_sigma_points.size() == UKF::NUM_SIGMA_POINTS);
-//     CHECK(no_wrap_sigma_points[0].angle() == Approx(init_angle));
-//     CHECK(no_wrap_sigma_points[1].angle() ==
-//           Approx(init_angle + std::sqrt(2.0)));
-//     CHECK(no_wrap_sigma_points[2].angle() ==
-//           Approx(init_angle - std::sqrt(2.0)));
+    // Wrapping
+    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    init_angle = M_PI - 0.1; // radians
+    ukf.set_state(UKF::State(init_angle));
+    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.generate_sigma_points();
+    const auto& sigma_points = ukf.get_sigma_points();
 
-//     // Wrapping
-//     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//     init_angle = M_PI - 0.1; // radians
-//     ukf.set_state(UKF::State(init_angle));
-//     ukf.set_state_covariance(UKF::N_by_N::Identity());
-//     ukf.generate_sigma_points();
-//     const auto& sigma_points = ukf.get_sigma_points();
+    REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
+    CHECK(sigma_points[0].angle() == Approx(init_angle));
+    CHECK(sigma_points[1].angle() ==
+          Approx(init_angle + std::sqrt(2.0) - 2 * M_PI));
+    CHECK(sigma_points[2].angle() == Approx(init_angle - std::sqrt(2.0)));
+  }
+}
 
-//     REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
-//     CHECK(sigma_points[0].angle() == Approx(init_angle));
-//     CHECK(sigma_points[1].angle() ==
-//           Approx(init_angle + std::sqrt(2.0) - 2 * M_PI));
-//     CHECK(sigma_points[2].angle() == Approx(init_angle - std::sqrt(2.0)));
-//   }
-// }
+TEST_CASE("Predict")
+{
+  SECTION("State is a vector space")
+  {
+    using UKF = UKF<Vector3, Vector2>;
+    UKF ukf(vector_mean_function<UKF::N, UKF::NUM_SIGMA_POINTS>,
+            vector_mean_function<UKF::M, UKF::NUM_SIGMA_POINTS>);
 
-// TEST_CASE("Predict")
-// {
-//   SECTION("State is a vector space")
-//   {
-//     using UKF = UKF<Vector<3>, 3, Vector<2>, 2>;
+    SECTION("Linear system model")
+    {
+      ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+      ukf.set_state(UKF::State(1, 2, 3));
+      ukf.set_state_covariance(UKF::N_by_N::Identity());
+      ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-//     SECTION("Linear system model")
-//     {
-//       UKF ukf;
+      // System model adds one to all state elements
+      auto sys_model = [](UKF::State& state) { state += UKF::State::Ones(); };
 
-//       ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//       ukf.set_state(UKF::State(1, 2, 3));
-//       ukf.set_state_covariance(UKF::N_by_N::Identity());
-//       ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+      ukf.predict(sys_model);
 
-//       // System model adds one to all state elements
-//       auto sys_model = [](UKF::State& state) { state += UKF::State::Ones(); };
+      const auto& state = ukf.get_state();
+      const auto& cov = ukf.get_state_covariance();
 
-//       ukf.predict(sys_model);
+      CHECK(state.x() == Approx(2.0));
+      CHECK(state.y() == Approx(3.0));
+      CHECK(state.z() == Approx(4.0));
 
-//       const auto& state = ukf.get_state();
-//       const auto& cov = ukf.get_state_covariance();
+      CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
+      CHECK(cov(0, 1) == Approx(0.0));
+      CHECK(cov(0, 2) == Approx(0.0));
+      CHECK(cov(1, 0) == Approx(0.0));
+      CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+      CHECK(cov(1, 2) == Approx(0.0));
+      CHECK(cov(2, 0) == Approx(0.0));
+      CHECK(cov(2, 1) == Approx(0.0));
+      CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
+    }
 
-//       CHECK(state.x() == Approx(2.0));
-//       CHECK(state.y() == Approx(3.0));
-//       CHECK(state.z() == Approx(4.0));
+    SECTION("Nonlinear system model")
+    {
+      ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+      ukf.set_state(UKF::State(1, 2, 3));
+      ukf.set_state_covariance(UKF::N_by_N::Identity());
+      ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-//       CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
-//       CHECK(cov(0, 1) == Approx(0.0));
-//       CHECK(cov(0, 2) == Approx(0.0));
-//       CHECK(cov(1, 0) == Approx(0.0));
-//       CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
-//       CHECK(cov(1, 2) == Approx(0.0));
-//       CHECK(cov(2, 0) == Approx(0.0));
-//       CHECK(cov(2, 1) == Approx(0.0));
-//       CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
-//     }
+      // System model has a product with state components
+      auto sys_model = [](UKF::State& state) {
+        const auto state_in = state;
+        state(0) += 0.1 * state_in(1);
+        state(1) += 1.0;
+        state(2) += 0.01 * state_in(0) * state_in(1);
+      };
 
-//     SECTION("Nonlinear system model")
-//     {
-//       UKF ukf;
+      ukf.predict(sys_model);
 
-//       ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//       ukf.set_state(UKF::State(1, 2, 3));
-//       ukf.set_state_covariance(UKF::N_by_N::Identity());
-//       ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+      const auto& state = ukf.get_state();
+      const auto& cov = ukf.get_state_covariance();
 
-//       // System model has a product with state components
-//       auto sys_model = [](UKF::State& state) {
-//         const auto state_in = state;
-//         state(0) += 0.1 * state_in(1);
-//         state(1) += 1.0;
-//         state(2) += 0.01 * state_in(0) * state_in(1);
-//       };
+      CHECK(state.x() == Approx(1.2));
+      CHECK(state.y() == Approx(3.0));
+      CHECK(state.z() == Approx(3.02));
 
-//       ukf.predict(sys_model);
+      CHECK(cov(0, 0) == Approx(1.0 + 1e-3 + 0.01));
+      CHECK(cov(0, 1) == Approx(0.1));
+      CHECK(cov(0, 2) == Approx(0.021));
+      CHECK(cov(1, 0) == Approx(0.1));
+      CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+      CHECK(cov(1, 2) == Approx(0.01));
+      CHECK(cov(2, 0) == Approx(0.021));
+      CHECK(cov(2, 1) == Approx(0.01));
+      CHECK(cov(2, 2) == Approx(1.0 + 1e-3 + 0.0005));
+    }
+  }
 
-//       const auto& state = ukf.get_state();
-//       const auto& cov = ukf.get_state_covariance();
+  // SECTION("State is a not a vector space")
+  // {
+  //   using UKF = UKF<Vector3, 3, Vector2, 2>;
 
-//       CHECK(state.x() == Approx(1.2));
-//       CHECK(state.y() == Approx(3.0));
-//       CHECK(state.z() == Approx(3.02));
+  //   SECTION("Linear system model")
+  //   {
+  //     UKF ukf;
 
-//       CHECK(cov(0, 0) == Approx(1.0 + 1e-3 + 0.01));
-//       CHECK(cov(0, 1) == Approx(0.1));
-//       CHECK(cov(0, 2) == Approx(0.021));
-//       CHECK(cov(1, 0) == Approx(0.1));
-//       CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
-//       CHECK(cov(1, 2) == Approx(0.01));
-//       CHECK(cov(2, 0) == Approx(0.021));
-//       CHECK(cov(2, 1) == Approx(0.01));
-//       CHECK(cov(2, 2) == Approx(1.0 + 1e-3 + 0.0005));
-//     }
-//   }
+  //     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+  //     ukf.set_state(UKF::State(1, 2, 3));
+  //     ukf.set_state_covariance(UKF::N_by_N::Identity());
+  //     ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-//   SECTION("State is a not a vector space")
-//   {
-//     using UKF = UKF<Vector3, 3, Vector2, 2>;
+  //     // System model adds one to all state elements
+  //     auto sys_model = [](UKF::State& state) { state += UKF::State::Ones();
+  //     };
 
-//     SECTION("Linear system model")
-//     {
-//       UKF ukf;
+  //     ukf.predict(sys_model);
 
-//       ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//       ukf.set_state(UKF::State(1, 2, 3));
-//       ukf.set_state_covariance(UKF::N_by_N::Identity());
-//       ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+  //     const auto& state = ukf.get_state();
+  //     const auto& cov = ukf.get_state_covariance();
 
-//       // System model adds one to all state elements
-//       auto sys_model = [](UKF::State& state) { state += UKF::State::Ones(); };
+  //     CHECK(state.x() == Approx(2.0));
+  //     CHECK(state.y() == Approx(3.0));
+  //     CHECK(state.z() == Approx(4.0));
 
-//       ukf.predict(sys_model);
+  //     CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
+  //     CHECK(cov(0, 1) == Approx(0.0));
+  //     CHECK(cov(0, 2) == Approx(0.0));
+  //     CHECK(cov(1, 0) == Approx(0.0));
+  //     CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+  //     CHECK(cov(1, 2) == Approx(0.0));
+  //     CHECK(cov(2, 0) == Approx(0.0));
+  //     CHECK(cov(2, 1) == Approx(0.0));
+  //     CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
+  //   }
 
-//       const auto& state = ukf.get_state();
-//       const auto& cov = ukf.get_state_covariance();
+  //   SECTION("Nonlinear system model")
+  //   {
+  //     UKF ukf;
 
-//       CHECK(state.x() == Approx(2.0));
-//       CHECK(state.y() == Approx(3.0));
-//       CHECK(state.z() == Approx(4.0));
+  //     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+  //     ukf.set_state(UKF::State(1, 2, 3));
+  //     ukf.set_state_covariance(UKF::N_by_N::Identity());
+  //     ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-//       CHECK(cov(0, 0) == Approx(1.0 + 1e-3));
-//       CHECK(cov(0, 1) == Approx(0.0));
-//       CHECK(cov(0, 2) == Approx(0.0));
-//       CHECK(cov(1, 0) == Approx(0.0));
-//       CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
-//       CHECK(cov(1, 2) == Approx(0.0));
-//       CHECK(cov(2, 0) == Approx(0.0));
-//       CHECK(cov(2, 1) == Approx(0.0));
-//       CHECK(cov(2, 2) == Approx(1.0 + 1e-3));
-//     }
+  //     // System model has a product with state components
+  //     auto sys_model = [](UKF::State& state) {
+  //       const auto state_in = state;
+  //       state(0) += 0.1 * state_in(1);
+  //       state(1) += 1.0;
+  //       state(2) += 0.01 * state_in(0) * state_in(1);
+  //     };
 
-//     SECTION("Nonlinear system model")
-//     {
-//       UKF ukf;
+  //     ukf.predict(sys_model);
 
-//       ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//       ukf.set_state(UKF::State(1, 2, 3));
-//       ukf.set_state_covariance(UKF::N_by_N::Identity());
-//       ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+  //     const auto& state = ukf.get_state();
+  //     const auto& cov = ukf.get_state_covariance();
 
-//       // System model has a product with state components
-//       auto sys_model = [](UKF::State& state) {
-//         const auto state_in = state;
-//         state(0) += 0.1 * state_in(1);
-//         state(1) += 1.0;
-//         state(2) += 0.01 * state_in(0) * state_in(1);
-//       };
+  //     CHECK(state.x() == Approx(1.2));
+  //     CHECK(state.y() == Approx(3.0));
+  //     CHECK(state.z() == Approx(3.02));
 
-//       ukf.predict(sys_model);
-
-//       const auto& state = ukf.get_state();
-//       const auto& cov = ukf.get_state_covariance();
-
-//       CHECK(state.x() == Approx(1.2));
-//       CHECK(state.y() == Approx(3.0));
-//       CHECK(state.z() == Approx(3.02));
-
-//       CHECK(cov(0, 0) == Approx(1.0 + 1e-3 + 0.01));
-//       CHECK(cov(0, 1) == Approx(0.1));
-//       CHECK(cov(0, 2) == Approx(0.021));
-//       CHECK(cov(1, 0) == Approx(0.1));
-//       CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
-//       CHECK(cov(1, 2) == Approx(0.01));
-//       CHECK(cov(2, 0) == Approx(0.021));
-//       CHECK(cov(2, 1) == Approx(0.01));
-//       CHECK(cov(2, 2) == Approx(1.0 + 1e-3 + 0.0005));
-//     }
-//   }
-// }
+  //     CHECK(cov(0, 0) == Approx(1.0 + 1e-3 + 0.01));
+  //     CHECK(cov(0, 1) == Approx(0.1));
+  //     CHECK(cov(0, 2) == Approx(0.021));
+  //     CHECK(cov(1, 0) == Approx(0.1));
+  //     CHECK(cov(1, 1) == Approx(1.0 + 1e-3));
+  //     CHECK(cov(1, 2) == Approx(0.01));
+  //     CHECK(cov(2, 0) == Approx(0.021));
+  //     CHECK(cov(2, 1) == Approx(0.01));
+  //     CHECK(cov(2, 2) == Approx(1.0 + 1e-3 + 0.0005));
+  //   }
+  // }
+}
 
 // SECTION("Custom state mean function")
 // {

@@ -10,8 +10,7 @@ Eigen::Matrix<double, DIM, 1> vector_mean_function(
     const std::array<Eigen::Matrix<double, DIM, 1>, NUM_VECS>& vectors,
     const std::array<double, NUM_VECS>& weights)
 {
-  Eigen::Matrix<double, DIM, 1> mean_vector =
-      Eigen::Matrix<double, DIM, 1>::Zero();
+  Eigen::Matrix<double, DIM, 1> mean_vector;
   for (std::size_t i = 0; i < NUM_VECS; ++i)
   {
     mean_vector += vectors[i] * weights[i];
@@ -22,11 +21,6 @@ Eigen::Matrix<double, DIM, 1> vector_mean_function(
 ///////////////////////////////////////////////////////////////////////////////
 // UnitComplex
 ///////////////////////////////////////////////////////////////////////////////
-UnitComplex UnitComplex::Zero()
-{
-  return UnitComplex(1.0, 0.0);
-}
-
 UnitComplex::UnitComplex(const Vector1& vec) : UnitComplex(vec(0))
 {
 }

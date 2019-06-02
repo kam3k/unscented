@@ -20,26 +20,13 @@ constexpr std::size_t UKF<STATE, MEAS>::NUM_SIGMA_POINTS;
 template <typename STATE, typename MEAS>
 UKF<STATE, MEAS>::UKF(StateMeanFunction state_mean_function,
                       MeasurementMeanFunction meas_mean_function)
-  : x_(STATE::Zero())
-  , y_(MEAS::Zero())
-  , y_hat_(MEAS::Zero())
-  , P_(N_by_N::Identity())
+  : P_(N_by_N::Identity())
   , Q_(N_by_N::Identity())
   , R_(M_by_M::Identity())
   , Pyy_(M_by_M::Identity())
-  , Pxy_(N_by_M::Zero())
-  , K_(N_by_M::Zero())
-  , innovation_(M_by_1::Zero())
   , state_mean_function_(std::move(state_mean_function))
   , meas_mean_function_(std::move(meas_mean_function))
 {
-  // Initialize all remaining member variables
-  for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
-  {
-    sigma_points_[i] = STATE::Zero();
-    meas_sigma_points_[i] = MEAS::Zero();
-  }
-  calculate_weights();
 }
 
 template <typename STATE, typename MEAS>

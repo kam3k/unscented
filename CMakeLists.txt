@@ -14,7 +14,10 @@ find_package(PythonLibs 2.7)
 # Library
 add_library(unscented INTERFACE)
 target_include_directories(unscented INTERFACE include ${EIGEN3_INCLUDE_DIR})
-target_compile_definitions(unscented INTERFACE EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h")
+target_compile_definitions(unscented INTERFACE 
+  EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h" 
+  EIGEN_INITIALIZE_MATRICES_BY_ZERO=1
+  )
 
 # Airplane tracking example
 # add_executable(airplane_tracking examples/airplane_tracking.cpp)
