@@ -1,6 +1,6 @@
 #define CATCH_CONFIG_MAIN
 #include "catch.hpp"
-#include "unscented/components.hpp"
+#include "unscented/primitives.hpp"
 #include "unscented/ukf.hpp"
 
 namespace unscented
@@ -289,7 +289,7 @@ TEST_CASE("Predict")
       ukf.set_state_covariance(UKF::N_by_N::Identity());
       ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-      // System model has a product with state components
+      // System model has a product with state elements
       auto sys_model = [](UKF::State& state) {
         const auto state_in = state;
         state(0) += 0.1 * state_in(1);
@@ -364,7 +364,7 @@ TEST_CASE("Predict")
   //     ukf.set_state_covariance(UKF::N_by_N::Identity());
   //     ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
-  //     // System model has a product with state components
+  //     // System model has a product with state elements
   //     auto sys_model = [](UKF::State& state) {
   //       const auto state_in = state;
   //       state(0) += 0.1 * state_in(1);

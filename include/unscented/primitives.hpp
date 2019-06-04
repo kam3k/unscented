@@ -1,17 +1,17 @@
-#include "unscented/components.h"
+#include "unscented/primitives.h"
 
 namespace unscented
 {
-template <typename COMPONENT, std::size_t ARRAY_SIZE>
-COMPONENT mean_function(const std::array<COMPONENT, ARRAY_SIZE>& components,
+template <typename PRIMITIVE, std::size_t ARRAY_SIZE>
+PRIMITIVE mean_function(const std::array<PRIMITIVE, ARRAY_SIZE>& primitives,
                         const std::array<double, ARRAY_SIZE>& weights)
 {
-  COMPONENT mean_component;
+  PRIMITIVE mean_primitive;
   for (std::size_t i = 0; i < ARRAY_SIZE; ++i)
   {
-    mean_component = mean_component + components[i] * weights[i];
+    mean_primitive = mean_primitive + primitives[i] * weights[i];
   }
-  return mean_component;
+  return mean_primitive;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -1,4 +1,4 @@
-#include "unscented/components.hpp"
+#include "unscented/primitives.hpp"
 #include "unscented/ukf.hpp"
 
 #include "matplotlibcpp.h"
@@ -15,8 +15,8 @@ namespace plt = matplotlibcpp;
 /** State is simple a 4-vector */
 using AirplaneState = unscented::Vector<4>;
 
-/** The components of the state vector */
-enum StateComponents
+/** The elements of the state vector */
+enum StateElements
 {
   POSITION = 0,
   VELOCITY,

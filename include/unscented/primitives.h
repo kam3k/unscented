@@ -2,8 +2,8 @@
 
 namespace unscented
 {
-template <typename COMPONENT, std::size_t ARRAY_SIZE>
-COMPONENT mean_function(const std::array<COMPONENT, ARRAY_SIZE>& components,
+template <typename PRIMITIVE, std::size_t ARRAY_SIZE>
+PRIMITIVE mean_function(const std::array<PRIMITIVE, ARRAY_SIZE>& primitives,
                         const std::array<double, ARRAY_SIZE>& weights);
 
 ///////////////////////////////////////////////////////////////////////////////

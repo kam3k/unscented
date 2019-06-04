@@ -40,7 +40,7 @@ Furthermore, *unscented* allows one to easily use multiple system models, multip
 
 ##### Batteries included
 
-In addition to being flexible, *unscented* includes implementations of many standard state and measurement components, with a focus on geometric components. These include different parameterizations for angles, rotations, and affine transformations (in both 2D and 3D). It is hoped that users creating new components will contribute them back to *unscented* so that others can benefit from them.
+In addition to being flexible, *unscented* includes implementations of many standard state and measurement primitives, with a focus on geometric primitives. These include different parameterizations for angles, rotations, and affine transformations (in both 2D and 3D). It is hoped that users creating new primitives will contribute them back to *unscented* so that others can benefit from them.
 
 ##### Expansive API
 
