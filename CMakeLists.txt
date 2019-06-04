@@ -23,10 +23,6 @@ target_compile_definitions(unscented INTERFACE
 add_executable(airplane_tracking examples/airplane_tracking.cpp)
 target_include_directories(airplane_tracking PRIVATE optional ${PYTHON_INCLUDE_DIRS})
 target_link_libraries(airplane_tracking unscented ${PYTHON_LIBRARIES})
-target_compile_definitions(airplane_tracking PRIVATE
-  EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h" 
-  EIGEN_INITIALIZE_MATRICES_BY_ZERO=1
-  )
 
 # Robot localization example
 # add_executable(robot_localization_2d examples/robot_localization_2d.cpp)

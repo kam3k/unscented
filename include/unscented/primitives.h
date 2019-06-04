@@ -2,10 +2,6 @@
 
 namespace unscented
 {
-template <typename PRIMITIVE, std::size_t ARRAY_SIZE>
-PRIMITIVE mean_function(const std::array<PRIMITIVE, ARRAY_SIZE>& primitives,
-                        const std::array<double, ARRAY_SIZE>& weights);
-
 ///////////////////////////////////////////////////////////////////////////////
 // Vectors
 ///////////////////////////////////////////////////////////////////////////////
@@ -21,8 +17,6 @@ struct UnitComplex
 
   UnitComplex() = default;
 
-  explicit UnitComplex(const Vector<1>& vec);
-
   explicit UnitComplex(double angle);
 
   UnitComplex(double a_in, double b_in);
@@ -34,13 +28,12 @@ struct UnitComplex
   double b{0.0};
 };
 
-UnitComplex operator+(const UnitComplex& lhs, const UnitComplex& rhs);
+UnitComplex operator+(const UnitComplex& lhs, double angle);
 
-Vector<1> operator-(const UnitComplex& lhs, const UnitComplex& rhs);
+UnitComplex operator+(const UnitComplex& lhs,
+                      const Vector<UnitComplex::DOF>& vec);
 
-UnitComplex unit_complex_mean_function(
-    const std::array<UnitComplex, 2 * UnitComplex::DOF + 1>& states,
-    const std::array<double, 2 * UnitComplex::DOF + 1>& weights);
+Vector<UnitComplex::DOF> operator-(const UnitComplex& lhs, const UnitComplex& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
 // SO2

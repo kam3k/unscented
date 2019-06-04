@@ -63,18 +63,6 @@ struct RadarMeasurement
   RadarMeasurement() = default;
 
   /**
-   * @brief Construct taking a vector with dimension the same as the DOF
-   * (required by filter)
-   *
-   * @param[in] vec Vector containing range and elevation of the radar
-   * measurement
-   */
-  explicit RadarMeasurement(const unscented::Vector<2>& vec)
-    : range(vec(0)), elevation(vec(1))
-  {
-  }
-
-  /**
    * @brief Constructor populating range and elevation (not required
    * by filter, included for convenience)
    *
@@ -109,15 +97,15 @@ struct RadarMeasurement
  * (required by the filter).
  *
  * @param[in] lhs
- * @param[in] rhs
+ * @param[in] vec
  *
  * @return Sum of two measurements, automatically handles wrapping of elevation
  * due to use of a unit complex number to represent it
  */
 RadarMeasurement operator+(const RadarMeasurement& lhs,
-                           const RadarMeasurement& rhs)
+                           const unscented::Vector<RadarMeasurement::DOF>& vec)
 {
-  return RadarMeasurement(lhs.range + rhs.range, lhs.elevation + rhs.elevation);
+  return RadarMeasurement(lhs.range + vec(0), lhs.elevation + vec(1));
 }
 
 /**
@@ -132,11 +120,11 @@ RadarMeasurement operator+(const RadarMeasurement& lhs,
  * wrapping of elevation angle due to use of a unit complex number to represent
  * it
  */
-unscented::Vector<2> operator-(const RadarMeasurement& lhs,
-                               const RadarMeasurement& rhs)
+unscented::Vector<RadarMeasurement::DOF> operator-(const RadarMeasurement& lhs,
+                                                   const RadarMeasurement& rhs)
 {
-  return unscented::Vector<2>(lhs.range - rhs.range,
-                              (lhs.elevation - rhs.elevation)(0));
+  return unscented::Vector<RadarMeasurement::DOF>(
+      lhs.range - rhs.range, (lhs.elevation - rhs.elevation)(0));
 }
 
 template <std::size_t NUM_SIGMA_POINTS>
@@ -184,8 +172,7 @@ int main()
   // altitude, climb rate) and the radar measurement has two degrees of freedom
   // (range, elevation)
   using UKF = unscented::UKF<AirplaneState, RadarMeasurement>;
-  UKF ukf(unscented::mean_function<AirplaneState, UKF::NUM_SIGMA_POINTS>,
-          radar_measurement_mean_function<UKF::NUM_SIGMA_POINTS>);
+  UKF ukf;
 
   // Simulation parameters
   const auto SIM_DURATION = 360.0; // seconds

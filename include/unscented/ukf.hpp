@@ -18,14 +18,11 @@ template <typename STATE, typename MEAS>
 constexpr std::size_t UKF<STATE, MEAS>::NUM_SIGMA_POINTS;
 
 template <typename STATE, typename MEAS>
-UKF<STATE, MEAS>::UKF(StateMeanFunction state_mean_function,
-                      MeasurementMeanFunction meas_mean_function)
+UKF<STATE, MEAS>::UKF()
   : P_(N_by_N::Identity())
   , Q_(N_by_N::Identity())
   , R_(M_by_M::Identity())
   , Pyy_(M_by_M::Identity())
-  , state_mean_function_(std::move(state_mean_function))
-  , meas_mean_function_(std::move(meas_mean_function))
 {
   calculate_weights();
 }
@@ -43,14 +40,14 @@ void UKF<STATE, MEAS>::predict(const SYS_MODEL& system_model, PARAMS... params)
   }
 
   // The (a priori) state is the weighted mean of the transformed sigma points
-  x_ = state_mean_function_(sigma_points_, sigma_weights_mean_);
+  x_ = calculate_mean_manifold(sigma_points_, sigma_weights_mean_);
 
   // Calculate the state covariance
   P_ = Q_;
   for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
   {
     const N_by_1 diff = sigma_points_[i] - x_;
-    P_ += (diff * diff.transpose()) * sigma_weights_cov_[i];
+    P_ += sigma_weights_cov_[i] * (diff * diff.transpose());
   }
 }
 
@@ -68,14 +65,14 @@ void UKF<STATE, MEAS>::correct(const MEAS_MODEL& meas_model, PARAMS... params)
 
   // The expected measurement is the weighted mean of the measurement sigma
   // points
-  y_hat_ = meas_mean_function_(meas_sigma_points_, sigma_weights_mean_);
+  y_hat_ = calculate_mean_manifold(meas_sigma_points_, sigma_weights_mean_);
 
   // Calculate the expected measurement covariance
   Pyy_ = R_;
   for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
   {
     const M_by_1 diff = meas_sigma_points_[i] - y_hat_;
-    Pyy_ += diff * diff.transpose() * sigma_weights_cov_[i];
+    Pyy_ += sigma_weights_cov_[i] * diff * diff.transpose();
   }
 
   // Calculate the cross covariance between the state and expected measurement
@@ -91,9 +88,20 @@ void UKF<STATE, MEAS>::correct(const MEAS_MODEL& meas_model, PARAMS... params)
   K_ = Pxy_ * Pyy_.inverse();
   innovation_ = y_ - y_hat_;
 
-  // Update the state mean and covariance
-  x_ = x_ + STATE(K_ * innovation_);
+  // Update the state covariance (temporary)
   P_ -= K_ * Pyy_ * K_.transpose();
+
+  // Update the state mean
+  generate_sigma_points(K_ * innovation_);
+  x_ = calculate_mean_manifold(sigma_points_, sigma_weights_mean_);
+
+  // Update the state covariance
+  P_ = N_by_N::Zero();
+  for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
+  {
+    const N_by_1 diff = sigma_points_[i] - x_;
+    P_ += sigma_weights_cov_[i] * diff * diff.transpose();
+  }
 }
 
 template <typename STATE, typename MEAS>
@@ -106,7 +114,8 @@ void UKF<STATE, MEAS>::correct(const MEAS_MODEL& meas_model, MEAS meas,
 }
 
 template <typename STATE, typename MEAS>
-void UKF<STATE, MEAS>::generate_sigma_points()
+void UKF<STATE, MEAS>::generate_sigma_points(
+    const N_by_1& delta /*= N_by_1::Zero()*/)
 {
   // Calculate the (weighted) matrix square root of the state covariance
   // matrix
@@ -122,8 +131,8 @@ void UKF<STATE, MEAS>::generate_sigma_points()
   for (std::size_t i = 0; i < N; ++i)
   {
     const N_by_1& perturb = sqrt_P.col(i);
-    sigma_points_[i + 1] = x_ + STATE(perturb);
-    sigma_points_[N + i + 1] = x_ + STATE(-perturb);
+    sigma_points_[i + 1] = x_ + (delta + perturb);
+    sigma_points_[N + i + 1] = x_ + (delta - perturb);
   }
 }
 
@@ -295,20 +304,6 @@ UKF<STATE, MEAS>::get_covariance_sigma_weights() const
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::StateMeanFunction&
-UKF<STATE, MEAS>::get_state_mean_function() const
-{
-  return state_mean_function_;
-}
-
-template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::MeasurementMeanFunction&
-UKF<STATE, MEAS>::get_measurement_mean_function() const
-{
-  return meas_mean_function_;
-}
-
-template <typename STATE, typename MEAS>
 void UKF<STATE, MEAS>::calculate_weights()
 {
   lambda_ = alpha_ * alpha_ * (N + kappa_) - N;
@@ -329,5 +324,34 @@ void UKF<STATE, MEAS>::calculate_weights()
     sigma_weights_mean_[i] = w_i;
     sigma_weights_cov_[i] = w_i;
   }
+}
+
+template <typename MANIFOLD, std::size_t ARRAY_SIZE>
+MANIFOLD calculate_mean_manifold(
+    const std::array<MANIFOLD, ARRAY_SIZE>& manifolds,
+    const std::array<double, ARRAY_SIZE>& weights)
+{
+  static const int MAX_ITERATIONS = 10000;
+  static const double EPS = 1e-6;
+
+  auto reference_manifold = manifolds[0];
+  Eigen::Matrix<double, MANIFOLD::DOF, 1> mean_vec;
+  int iteration_count = 0;
+
+  do
+  {
+    mean_vec = Eigen::Matrix<double, MANIFOLD::DOF, 1>::Zero();
+    for (std::size_t i = 0; i < ARRAY_SIZE; ++i)
+    {
+      mean_vec += weights[i] * (manifolds[i] - reference_manifold);
+    }
+    reference_manifold = reference_manifold + mean_vec;
+    ++iteration_count;
+  } while (mean_vec.norm() > EPS && iteration_count < MAX_ITERATIONS);
+
+  assert(iteration_count < MAX_ITERATIONS &&
+         "Calculating mean manifold did not converge");
+
+  return reference_manifold;
 }
 } // namespace unscented

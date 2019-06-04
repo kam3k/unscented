@@ -34,14 +34,7 @@ public:
 
   using MeasurementSigmaPoints = std::array<MEAS, NUM_SIGMA_POINTS>;
 
-  using StateMeanFunction =
-      std::function<STATE(const SigmaPoints&, const SigmaWeights&)>;
-
-  using MeasurementMeanFunction =
-      std::function<MEAS(const MeasurementSigmaPoints&, const SigmaWeights&)>;
-
-  UKF(StateMeanFunction state_mean_function,
-      MeasurementMeanFunction meas_mean_function);
+  UKF();
 
   template <typename SYS_MODEL, typename... PARAMS>
   void predict(const SYS_MODEL& system_model, PARAMS...);
@@ -52,7 +45,7 @@ public:
   template <typename MEAS_MODEL, typename... PARAMS>
   void correct(const MEAS_MODEL& meas_model, MEAS meas, PARAMS...);
 
-  void generate_sigma_points();
+  void generate_sigma_points(const N_by_1& delta = N_by_1::Zero());
 
   void set_state(const STATE& state);
 
@@ -104,10 +97,6 @@ public:
 
   const SigmaWeights& get_covariance_sigma_weights() const;
 
-  const StateMeanFunction& get_state_mean_function() const;
-
-  const MeasurementMeanFunction& get_measurement_mean_function() const;
-
 private:
   void calculate_weights();
 
@@ -149,10 +138,11 @@ private:
 
   double eta_;
 
-  StateMeanFunction state_mean_function_;
-
-  MeasurementMeanFunction meas_mean_function_;
-
   Eigen::LLT<N_by_N> cholesky_;
 };
+
+template <typename MANIFOLD, std::size_t ARRAY_SIZE>
+MANIFOLD calculate_mean_manifold(
+    const std::array<MANIFOLD, ARRAY_SIZE>& manifolds,
+    const std::array<double, ARRAY_SIZE>& weights);
 } // namespace unscented

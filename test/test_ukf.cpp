@@ -59,8 +59,7 @@ TEST_CASE("Static dimensions")
 TEST_CASE("Weights")
 {
   using UKF = UKF<Vector<3>, Vector<2>>;
-  UKF ukf(mean_function<Vector<3>, UKF::NUM_SIGMA_POINTS>,
-          mean_function<Vector<2>, UKF::NUM_SIGMA_POINTS>);
+  UKF ukf;
 
   SECTION("Alpha 1, Beta 2, Kappa 0")
   {
@@ -173,8 +172,7 @@ TEST_CASE("Sigma points")
   SECTION("State is a vector space")
   {
     using UKF = UKF<Vector<3>, Vector<2>>;
-    UKF ukf(mean_function<Vector<3>, UKF::NUM_SIGMA_POINTS>,
-            mean_function<Vector<2>, UKF::NUM_SIGMA_POINTS>);
+    UKF ukf;
 
     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
     ukf.set_state(UKF::State(1, 2, 3));
@@ -210,7 +208,7 @@ TEST_CASE("Sigma points")
   SECTION("State is not a vector space")
   {
     using UKF = UKF<UnitComplex, UnitComplex>;
-    UKF ukf(unit_complex_mean_function, unit_complex_mean_function);
+    UKF ukf;
 
     // No wrapping
     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
@@ -249,8 +247,7 @@ TEST_CASE("Predict")
   SECTION("State is a vector space")
   {
     using UKF = UKF<Vector<3>, Vector<2>>;
-    UKF ukf(mean_function<Vector<3>, UKF::NUM_SIGMA_POINTS>,
-            mean_function<Vector<2>, UKF::NUM_SIGMA_POINTS>);
+    UKF ukf;
 
     SECTION("Linear system model")
     {
