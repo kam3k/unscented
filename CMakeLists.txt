@@ -10,6 +10,7 @@ find_package(Eigen3 REQUIRED)
 
 # Find Python Libraries
 find_package(PythonLibs 2.7)
+find_package(Python COMPONENTS NumPy)
 
 # Library
 add_library(unscented INTERFACE)
@@ -21,7 +22,7 @@ target_compile_definitions(unscented INTERFACE
 
 # Airplane tracking example
 add_executable(airplane_tracking examples/airplane_tracking.cpp)
-target_include_directories(airplane_tracking PRIVATE optional ${PYTHON_INCLUDE_DIRS})
+target_include_directories(airplane_tracking PRIVATE optional ${PYTHON_INCLUDE_DIRS} ${Python_NumPy_INCLUDE_DIRS})
 target_link_libraries(airplane_tracking unscented ${PYTHON_LIBRARIES})
 target_compile_definitions(airplane_tracking PRIVATE
   EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h" 
