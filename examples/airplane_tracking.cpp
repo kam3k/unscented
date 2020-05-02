@@ -1,12 +1,8 @@
 #include "unscented/primitives.hpp"
 #include "unscented/ukf.hpp"
 
-#include "matplotlibcpp.h"
-
+#include <iostream>
 #include <random>
-#include <valarray>
-
-namespace plt = matplotlibcpp;
 
 ///////////////////////////////////////////////////////////////////////////////
 // State and system model
@@ -230,8 +226,8 @@ int main()
   //////////////////////////////////////////////////////////////////////////////
 
   double sim_time = 0.0;
-  std::vector<double> sim_time_history = {sim_time};
-  while (sim_time < SIM_DURATION)
+  std::vector<double> sim_time_history;
+  while (sim_time <= SIM_DURATION)
   {
     // One minute into the simulation, set a non-zero climb rate
     if (sim_time > 60.0)
@@ -256,96 +252,38 @@ int main()
     ukf.predict(system_model, DT);
     ukf.correct(measurement_model, meas);
 
-    // Move time forward and record all the current values in the history
-    sim_time += DT;
+    // Record all the current values in the history
     estimated_state_history.push_back(ukf.get_state());
     estimated_state_cov_history.push_back(ukf.get_state_covariance());
     sim_time_history.push_back(sim_time);
+
+    // Move time forward
+    sim_time += DT;
   }
 
   //////////////////////////////////////////////////////////////////////////////
-  // Plot the results
+  // Output the results
   //////////////////////////////////////////////////////////////////////////////
 
-  std::vector<double> true_positions;
-  std::vector<double> true_velocities;
-  std::vector<double> true_altitudes;
-  std::vector<double> true_climb_rates;
-  for (const auto& state : true_state_history)
-  {
-    true_positions.push_back(state[POSITION]);
-    true_velocities.push_back(state[VELOCITY]);
-    true_altitudes.push_back(state[ALTITUDE]);
-    true_climb_rates.push_back(state[CLIMB_RATE]);
-  }
-
-  const auto hist_size = sim_time_history.size();
-  std::valarray<double> estimated_positions(hist_size);
-  std::valarray<double> estimated_positions_std_devs(hist_size);
-  std::valarray<double> estimated_velocities(hist_size);
-  std::valarray<double> estimated_velocities_std_devs(hist_size);
-  std::valarray<double> estimated_altitudes(hist_size);
-  std::valarray<double> estimated_altitudes_std_devs(hist_size);
-  std::valarray<double> estimated_climb_rates(hist_size);
-  std::valarray<double> estimated_climb_rates_std_devs(hist_size);
+  std::cout << "time,true_pos,est_pos,est_pos_std_dev,true_vel,est_vel,est_vel_"
+               "std_dev,true_alt,est_alt,est_alt_std_dev,true_climb,est_climb,"
+               "est_climb_std_dev\n";
   for (auto i = 0; i < sim_time_history.size(); ++i)
   {
-    const auto& state = estimated_state_history[i];
-    const auto& state_cov = estimated_state_cov_history[i];
-    estimated_positions[i] = state[POSITION];
-    estimated_positions_std_devs[i] = std::sqrt(state_cov(POSITION, POSITION));
-    estimated_velocities[i] = state[VELOCITY];
-    estimated_velocities_std_devs[i] = std::sqrt(state_cov(VELOCITY, VELOCITY));
-    estimated_altitudes[i] = state[ALTITUDE];
-    estimated_altitudes_std_devs[i] = std::sqrt(state_cov(ALTITUDE, ALTITUDE));
-    estimated_climb_rates[i] = state[CLIMB_RATE];
-    estimated_climb_rates_std_devs[i] =
-        std::sqrt(state_cov(CLIMB_RATE, CLIMB_RATE));
+    const auto& timestamp = sim_time_history[i];
+    const auto& true_state = true_state_history[i];
+    const auto& est_state = estimated_state_history[i];
+    const auto& est_state_cov = estimated_state_cov_history[i];
+    std::cout << timestamp << "," << true_state[POSITION] << ","
+              << est_state[POSITION] << ","
+              << std::sqrt(est_state_cov(POSITION, POSITION)) << ","
+              << true_state[VELOCITY] << "," << est_state[VELOCITY] << ","
+              << std::sqrt(est_state_cov(VELOCITY, VELOCITY)) << ","
+              << true_state[ALTITUDE] << "," << est_state[ALTITUDE] << ","
+              << std::sqrt(est_state_cov(ALTITUDE, ALTITUDE)) << ","
+              << true_state[CLIMB_RATE] << "," << est_state[CLIMB_RATE] << ","
+              << std::sqrt(est_state_cov(CLIMB_RATE, CLIMB_RATE)) << "\n";
   }
 
-  plt::subplot(4, 1, 1);
-  plt::plot(
-      sim_time_history, true_positions, "k-", sim_time_history,
-      estimated_positions, "b-", sim_time_history,
-      std::valarray<double>(estimated_positions + estimated_positions_std_devs),
-      "g--", sim_time_history,
-      std::valarray<double>(estimated_positions - estimated_positions_std_devs),
-      "g--");
-  plt::xlabel("Time [s]");
-  plt::ylabel("Position [m]");
-  plt::subplot(4, 1, 2);
-  plt::plot(sim_time_history, true_velocities, "k-", sim_time_history,
-            estimated_velocities, "b-", sim_time_history,
-            std::valarray<double>(estimated_velocities +
-                                  estimated_velocities_std_devs),
-            "g--", sim_time_history,
-            std::valarray<double>(estimated_velocities -
-                                  estimated_velocities_std_devs),
-            "g--");
-  plt::xlabel("Time [s]");
-  plt::ylabel("Velocity [m/s]");
-  plt::subplot(4, 1, 3);
-  plt::plot(
-      sim_time_history, true_altitudes, "k-", sim_time_history,
-      estimated_altitudes, "b-", sim_time_history,
-      std::valarray<double>(estimated_altitudes + estimated_altitudes_std_devs),
-      "g--", sim_time_history,
-      std::valarray<double>(estimated_altitudes - estimated_altitudes_std_devs),
-      "g--");
-  plt::xlabel("Time [s]");
-  plt::ylabel("Altitude [m]");
-  plt::subplot(4, 1, 4);
-  plt::plot(sim_time_history, true_climb_rates, "k-", sim_time_history,
-            estimated_climb_rates, "b-", sim_time_history,
-            std::valarray<double>(estimated_climb_rates +
-                                  estimated_climb_rates_std_devs),
-            "g--", sim_time_history,
-            std::valarray<double>(estimated_climb_rates -
-                                  estimated_climb_rates_std_devs),
-            "g--");
-  plt::title("Airplane Climb Rate");
-  plt::xlabel("Time [s]");
-  plt::ylabel("Climb Rate [m/s]");
-
-  plt::show();
+  return 0;
 }
