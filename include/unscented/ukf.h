@@ -1,3 +1,6 @@
+#ifndef UNSCENTED_UKF_H
+#define UNSCENTED_UKF_H
+
 #include <Eigen/Dense>
 
 #include <array>
@@ -146,3 +149,5 @@ MANIFOLD calculate_mean_manifold(
     const std::array<MANIFOLD, ARRAY_SIZE>& manifolds,
     const std::array<double, ARRAY_SIZE>& weights);
 } // namespace unscented
+
+#endif

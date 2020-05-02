@@ -1,3 +1,6 @@
+#ifndef UNSCENTED_UKF_HPP
+#define UNSCENTED_UKF_HPP
+
 #include "unscented/ukf.h"
 
 #include <cassert>
@@ -352,3 +355,5 @@ MANIFOLD calculate_mean_manifold(
   return reference_manifold;
 }
 } // namespace unscented
+
+#endif

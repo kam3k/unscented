@@ -17,7 +17,8 @@ target_compile_definitions(unscented INTERFACE
   )
 
 # Airplane tracking example
-add_executable(airplane_tracking examples/airplane_tracking.cpp)
+add_executable(airplane_tracking examples/airplane_tracking/airplane_tracking.cpp)
+target_include_directories(airplane_tracking PRIVATE examples/airplane_tracking)
 target_link_libraries(airplane_tracking unscented)
 target_compile_definitions(airplane_tracking PRIVATE
   EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h" 

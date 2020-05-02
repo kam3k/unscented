@@ -1,3 +1,6 @@
+#ifndef UNSCENTED_PRIMITIVES_H
+#define UNSCENTED_PRIMITIVES_H
+
 #include <Eigen/Dense>
 
 namespace unscented
@@ -203,3 +206,5 @@ Vector<6> operator-(const SE3& lhs, const SE3& rhs);
 SE3 SE3_mean_function(const std::array<SE3, 2 * SE3::DOF + 1>& states,
                       const std::array<double, 2 * SE3::DOF + 1>& weights);
 } // namespace unscented
+
+#endif

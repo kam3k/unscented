@@ -1,3 +1,6 @@
+#ifndef UNSCENTED_PRIMITIVES_HPP
+#define UNSCENTED_PRIMITIVES_HPP
+
 #include "unscented/primitives.h"
 
 namespace unscented
@@ -45,3 +48,5 @@ Vector<UnitComplex::DOF> operator-(const UnitComplex& lhs,
       UnitComplex(rhs.angle() - lhs.angle()).angle());
 }
 } // namespace unscented
+
+#endif
