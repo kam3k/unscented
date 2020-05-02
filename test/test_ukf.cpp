@@ -63,10 +63,10 @@ TEST_CASE("Weights")
 
   SECTION("Alpha 1, Beta 2, Kappa 0")
   {
-    ukf.set_weight_coefficients(1.0, 2.0, 0.0);
+    ukf.weight_coefficients(1.0, 2.0, 0.0);
 
-    const auto mean_weights = ukf.get_mean_sigma_weights();
-    const auto cov_weights = ukf.get_covariance_sigma_weights();
+    const auto mean_weights = ukf.mean_sigma_weights();
+    const auto cov_weights = ukf.covariance_sigma_weights();
 
     REQUIRE(mean_weights.size() == UKF::NUM_SIGMA_POINTS);
     REQUIRE(cov_weights.size() == UKF::NUM_SIGMA_POINTS);
@@ -98,10 +98,10 @@ TEST_CASE("Weights")
 
   SECTION("Alpha 0.001, Beta 2, Kappa 0")
   {
-    ukf.set_weight_coefficients(0.001, 2.0, 0.0);
+    ukf.weight_coefficients(0.001, 2.0, 0.0);
 
-    const auto mean_weights = ukf.get_mean_sigma_weights();
-    const auto cov_weights = ukf.get_covariance_sigma_weights();
+    const auto mean_weights = ukf.mean_sigma_weights();
+    const auto cov_weights = ukf.covariance_sigma_weights();
 
     REQUIRE(mean_weights.size() == UKF::NUM_SIGMA_POINTS);
     REQUIRE(cov_weights.size() == UKF::NUM_SIGMA_POINTS);
@@ -133,10 +133,10 @@ TEST_CASE("Weights")
 
   SECTION("Alpha 1, Beta 1, Kappa 1")
   {
-    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.weight_coefficients(1.0, 1.0, 1.0);
 
-    const auto mean_weights = ukf.get_mean_sigma_weights();
-    const auto cov_weights = ukf.get_covariance_sigma_weights();
+    const auto mean_weights = ukf.mean_sigma_weights();
+    const auto cov_weights = ukf.covariance_sigma_weights();
 
     REQUIRE(mean_weights.size() == UKF::NUM_SIGMA_POINTS);
     REQUIRE(cov_weights.size() == UKF::NUM_SIGMA_POINTS);
@@ -174,11 +174,11 @@ TEST_CASE("Sigma points")
     using UKF = UKF<Vector<3>, Vector<2>>;
     UKF ukf;
 
-    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-    ukf.set_state(UKF::State(1, 2, 3));
-    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.weight_coefficients(1.0, 1.0, 1.0);
+    ukf.state(UKF::State(1, 2, 3));
+    ukf.state_covariance(UKF::N_by_N::Identity());
     ukf.generate_sigma_points();
-    const auto& sigma_points = ukf.get_sigma_points();
+    const auto& sigma_points = ukf.sigma_points();
 
     REQUIRE(UKF::NUM_SIGMA_POINTS == 7);
     REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
@@ -211,12 +211,12 @@ TEST_CASE("Sigma points")
     UKF ukf;
 
     // No wrapping
-    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.weight_coefficients(1.0, 1.0, 1.0);
     double init_angle = 1.0; // radians
-    ukf.set_state(UKF::State(init_angle));
-    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.state(UKF::State(init_angle));
+    ukf.state_covariance(UKF::N_by_N::Identity());
     ukf.generate_sigma_points();
-    const auto& no_wrap_sigma_points = ukf.get_sigma_points();
+    const auto& no_wrap_sigma_points = ukf.sigma_points();
 
     REQUIRE(UKF::NUM_SIGMA_POINTS == 3);
     REQUIRE(no_wrap_sigma_points.size() == UKF::NUM_SIGMA_POINTS);
@@ -227,12 +227,12 @@ TEST_CASE("Sigma points")
           Approx(init_angle - std::sqrt(2.0)));
 
     // Wrapping
-    ukf.set_weight_coefficients(1.0, 1.0, 1.0);
+    ukf.weight_coefficients(1.0, 1.0, 1.0);
     init_angle = M_PI - 0.1; // radians
-    ukf.set_state(UKF::State(init_angle));
-    ukf.set_state_covariance(UKF::N_by_N::Identity());
+    ukf.state(UKF::State(init_angle));
+    ukf.state_covariance(UKF::N_by_N::Identity());
     ukf.generate_sigma_points();
-    const auto& sigma_points = ukf.get_sigma_points();
+    const auto& sigma_points = ukf.sigma_points();
 
     REQUIRE(sigma_points.size() == UKF::NUM_SIGMA_POINTS);
     CHECK(sigma_points[0].angle() == Approx(init_angle));
@@ -251,18 +251,18 @@ TEST_CASE("Predict")
 
     SECTION("Linear system model")
     {
-      ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-      ukf.set_state(UKF::State(1, 2, 3));
-      ukf.set_state_covariance(UKF::N_by_N::Identity());
-      ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+      ukf.weight_coefficients(1.0, 1.0, 1.0);
+      ukf.state(UKF::State(1, 2, 3));
+      ukf.state_covariance(UKF::N_by_N::Identity());
+      ukf.process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
       // System model adds one to all state elements
       auto sys_model = [](UKF::State& state) { state += UKF::State::Ones(); };
 
       ukf.predict(sys_model);
 
-      const auto& state = ukf.get_state();
-      const auto& cov = ukf.get_state_covariance();
+      const auto& state = ukf.state();
+      const auto& cov = ukf.state_covariance();
 
       CHECK(state.x() == Approx(2.0));
       CHECK(state.y() == Approx(3.0));
@@ -281,10 +281,10 @@ TEST_CASE("Predict")
 
     SECTION("Nonlinear system model")
     {
-      ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-      ukf.set_state(UKF::State(1, 2, 3));
-      ukf.set_state_covariance(UKF::N_by_N::Identity());
-      ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+      ukf.weight_coefficients(1.0, 1.0, 1.0);
+      ukf.state(UKF::State(1, 2, 3));
+      ukf.state_covariance(UKF::N_by_N::Identity());
+      ukf.process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
       // System model has a product with state elements
       auto sys_model = [](UKF::State& state) {
@@ -296,8 +296,8 @@ TEST_CASE("Predict")
 
       ukf.predict(sys_model);
 
-      const auto& state = ukf.get_state();
-      const auto& cov = ukf.get_state_covariance();
+      const auto& state = ukf.state();
+      const auto& cov = ukf.state_covariance();
 
       CHECK(state.x() == Approx(1.2));
       CHECK(state.y() == Approx(3.0));
@@ -323,10 +323,10 @@ TEST_CASE("Predict")
   //   {
   //     UKF ukf;
 
-  //     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-  //     ukf.set_state(UKF::State(1, 2, 3));
-  //     ukf.set_state_covariance(UKF::N_by_N::Identity());
-  //     ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+  //     ukf.weight_coefficients(1.0, 1.0, 1.0);
+  //     ukf.state(UKF::State(1, 2, 3));
+  //     ukf.state_covariance(UKF::N_by_N::Identity());
+  //     ukf.process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
   //     // System model adds one to all state elements
   //     auto sys_model = [](UKF::State& state) { state += UKF::State::Ones();
@@ -334,8 +334,8 @@ TEST_CASE("Predict")
 
   //     ukf.predict(sys_model);
 
-  //     const auto& state = ukf.get_state();
-  //     const auto& cov = ukf.get_state_covariance();
+  //     const auto& state = ukf.state();
+  //     const auto& cov = ukf.state_covariance();
 
   //     CHECK(state.x() == Approx(2.0));
   //     CHECK(state.y() == Approx(3.0));
@@ -356,10 +356,10 @@ TEST_CASE("Predict")
   //   {
   //     UKF ukf;
 
-  //     ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-  //     ukf.set_state(UKF::State(1, 2, 3));
-  //     ukf.set_state_covariance(UKF::N_by_N::Identity());
-  //     ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+  //     ukf.weight_coefficients(1.0, 1.0, 1.0);
+  //     ukf.state(UKF::State(1, 2, 3));
+  //     ukf.state_covariance(UKF::N_by_N::Identity());
+  //     ukf.process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
   //     // System model has a product with state elements
   //     auto sys_model = [](UKF::State& state) {
@@ -371,8 +371,8 @@ TEST_CASE("Predict")
 
   //     ukf.predict(sys_model);
 
-  //     const auto& state = ukf.get_state();
-  //     const auto& cov = ukf.get_state_covariance();
+  //     const auto& state = ukf.state();
+  //     const auto& cov = ukf.state_covariance();
 
   //     CHECK(state.x() == Approx(1.2));
   //     CHECK(state.y() == Approx(3.0));
@@ -414,12 +414,12 @@ TEST_CASE("Predict")
 //     }
 //     return weighted_state;
 //   };
-//   ukf.set_state_mean_function(custom_state_mean_func);
+//   ukf.state_mean_function(custom_state_mean_func);
 
-//   ukf.set_weight_coefficients(1.0, 1.0, 1.0);
-//   ukf.set_state(UKF::State(1, 2, 0.5));
-//   ukf.set_state_covariance(UKF::N_by_N::Identity());
-//   ukf.set_process_covariance(UKF::N_by_N::Identity() * 1e-3);
+//   ukf.weight_coefficients(1.0, 1.0, 1.0);
+//   ukf.state(UKF::State(1, 2, 0.5));
+//   ukf.state_covariance(UKF::N_by_N::Identity());
+//   ukf.process_covariance(UKF::N_by_N::Identity() * 1e-3);
 
 //   // System model adds one to all state elements
 //   auto sys_model = [](UKF::State& state) {
@@ -428,8 +428,8 @@ TEST_CASE("Predict")
 
 //   ukf.predict(sys_model);
 
-//   const auto& state = ukf.get_state();
-//   const auto& cov = ukf.get_state_covariance();
+//   const auto& state = ukf.state();
+//   const auto& cov = ukf.state_covariance();
 
 //   CHECK(state.x() == Approx(2.0));
 //   CHECK(state.y() == Approx(3.0));

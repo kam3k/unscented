@@ -123,23 +123,6 @@ unscented::Vector<RadarMeasurement::DOF> operator-(const RadarMeasurement& lhs,
       lhs.range - rhs.range, (lhs.elevation - rhs.elevation)(0));
 }
 
-template <std::size_t NUM_SIGMA_POINTS>
-RadarMeasurement radar_measurement_mean_function(
-    const std::array<RadarMeasurement, NUM_SIGMA_POINTS>& states,
-    const std::array<double, NUM_SIGMA_POINTS>& weights)
-{
-  double range{0.0};
-  double a{0.0};
-  double b{0.0};
-  for (std::size_t i = 0; i < NUM_SIGMA_POINTS; ++i)
-  {
-    range += weights[i] * states[i].range;
-    a += weights[i] * states[i].elevation.a;
-    b += weights[i] * states[i].elevation.b;
-  }
-  return RadarMeasurement(range, unscented::UnitComplex(a, b));
-}
-
 /**
  * @brief The measurement model maps a state to an expected measurement. In this
  * case, we can use trigonometry to map the position and altitude of the
@@ -183,7 +166,7 @@ int main()
   Eigen::Matrix4d Q;
   Q.block<2, 2>(0, 0) = G * G.transpose() * PROCESS_VAR;
   Q.block<2, 2>(2, 2) = G * G.transpose() * PROCESS_VAR;
-  ukf.set_process_covariance(Q);
+  ukf.process_covariance(Q);
 
   // Calculate measurement noise covariance R (standard deviations chosen
   // somewhat arbitrarily)
@@ -191,18 +174,18 @@ int main()
   const auto ELEVATION_STD_DEV = 0.5 * M_PI / 180.0; // radians
   UKF::M_by_M R;
   R << std::pow(RANGE_STD_DEV, 2), 0.0, 0.0, std::pow(ELEVATION_STD_DEV, 2);
-  ukf.set_measurement_covariance(R);
+  ukf.measurement_covariance(R);
 
   // Set initial state estimate and its covariance
   AirplaneState true_state(0, 100, 1000, 0);
   AirplaneState initial_state_estimate(0, 90, 1100, 0);
-  ukf.set_state(initial_state_estimate);
+  ukf.state(initial_state_estimate);
   UKF::N_by_N P = UKF::N_by_N::Zero();
   P(0, 0) = std::pow(300.0, 2); // m^2
   P(1, 1) = std::pow(30.0, 2); // (m/s)^2
   P(2, 2) = std::pow(150.0, 2); // m^2
   P(3, 3) = std::pow(3.0, 2); // (m/s)^2
-  ukf.set_state_covariance(P);
+  ukf.state_covariance(P);
 
   // Create vectors that will hold the histories of the true and estimated
   // states, populating them both with the initial states. This is simply
@@ -211,7 +194,7 @@ int main()
   std::vector<AirplaneState> true_state_history;
   true_state_history.push_back(true_state);
   std::vector<AirplaneState> estimated_state_history;
-  estimated_state_history.push_back(ukf.get_state());
+  estimated_state_history.push_back(ukf.state());
   std::vector<UKF::N_by_N> estimated_state_cov_history;
 
   // Setup random number generation
@@ -253,8 +236,8 @@ int main()
     ukf.correct(measurement_model, meas);
 
     // Record all the current values in the history
-    estimated_state_history.push_back(ukf.get_state());
-    estimated_state_cov_history.push_back(ukf.get_state_covariance());
+    estimated_state_history.push_back(ukf.state());
+    estimated_state_cov_history.push_back(ukf.state_covariance());
     sim_time_history.push_back(sim_time);
 
     // Move time forward
