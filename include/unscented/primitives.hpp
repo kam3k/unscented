@@ -46,8 +46,7 @@ Angle operator+(const Angle& lhs, const Vector<Angle::DOF>& vec)
 
 Vector<Angle::DOF> operator-(const Angle& lhs, const Angle& rhs)
 {
-  return Vector<Angle::DOF>(
-      Angle(rhs.get_angle() - lhs.get_angle()).get_angle());
+  return Angle(lhs.get_angle() - rhs.get_angle()).get_vector();
 }
 } // namespace unscented
 

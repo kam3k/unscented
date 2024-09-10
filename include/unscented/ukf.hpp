@@ -125,17 +125,17 @@ void UKF<STATE, MEAS>::generate_sigma_points(
   cholesky_.compute(P_);
   const N_by_N& sqrt_P = eta_ * cholesky_.matrixL().toDenseMatrix();
 
-  // First sigma point is the current state mean
-  sigma_points_[0] = x_;
+  // First sigma point is the perturbed state mean
+  sigma_points_[0] = x_ + delta;
 
-  // Next N sigma points are the current state mean perturbed by the columns
-  // of sqrt_P, and the N sigma points after that are the same perturbations
+  // Next N sigma points are the current state mean offset by the columns
+  // of sqrt_P, and the N sigma points after that are the same offsets
   // but negated
   for (std::size_t i = 0; i < N; ++i)
   {
-    const N_by_1& perturb = sqrt_P.col(i);
-    sigma_points_[i + 1] = x_ + (delta + perturb);
-    sigma_points_[N + i + 1] = x_ + (delta - perturb);
+    const N_by_1& offset = sqrt_P.col(i);
+    sigma_points_[i + 1] = x_ + (delta + offset);
+    sigma_points_[N + i + 1] = x_ + (delta - offset);
   }
 }
 

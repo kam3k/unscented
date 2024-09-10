@@ -169,11 +169,11 @@ int main() {
       std::cout << "P_xy:\n" << P_xy << "\n";
       std::cout << "K:\n" << K << "\n";
       std::cout << "inn: " << inn.transpose() << "\n";
-      std::cout << "P: " << P << "\n";
+      std::cout << "P:\n" << P << "\n";
       std::cout << "-------------\n";
-    if (sim_time > 10.0) {
-    break;
-    }
+    // if (sim_time > 10.0) {
+    // break;
+    // }
 
     // Record all the current values in the history
     estimated_state_history.push_back(ukf.get_state());
