@@ -112,7 +112,7 @@ template <typename MEAS_MODEL, typename... PARAMS>
 void UKF<STATE, MEAS>::correct(const MEAS_MODEL& meas_model, MEAS meas,
                                PARAMS... params)
 {
-  measurement(std::move(meas));
+  set_measurement(std::move(meas));
   correct(meas_model, params...);
 }
 
