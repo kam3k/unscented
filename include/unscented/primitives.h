@@ -12,199 +12,120 @@ template <std::size_t DIM>
 using Vector = Eigen::Matrix<double, DIM, 1>;
 
 ///////////////////////////////////////////////////////////////////////////////
-// UnitComplex
+// Angle
 ///////////////////////////////////////////////////////////////////////////////
-struct UnitComplex
+class Angle
 {
+public:
   static constexpr std::size_t DOF = 1;
 
-  UnitComplex() = default;
+  Angle() = default;
 
-  explicit UnitComplex(double angle);
+  explicit Angle(const Vector<DOF>& vec);
 
-  UnitComplex(double a_in, double b_in);
+  explicit Angle(double angle);
 
-  double angle() const;
+  Angle(double cos_angle, double sin_angle);
 
-  double a{1.0};
+  double get_angle() const;
 
-  double b{0.0};
+  Vector<DOF> get_vector() const;
+
+private:
+  double cos_angle_{1.0};
+
+  double sin_angle_{0.0};
 };
 
-UnitComplex operator+(const UnitComplex& lhs, double angle);
+Angle operator+(const Angle& lhs, const Vector<Angle::DOF>& vec);
 
-UnitComplex operator+(const UnitComplex& lhs,
-                      const Vector<UnitComplex::DOF>& vec);
-
-Vector<UnitComplex::DOF> operator-(const UnitComplex& lhs, const UnitComplex& rhs);
-
-///////////////////////////////////////////////////////////////////////////////
-// SO2
-///////////////////////////////////////////////////////////////////////////////
-struct SO2
-{
-  static constexpr std::size_t DOF = 1;
-
-  SO2() = default;
-
-  explicit SO2(const Vector<1>& vec);
-
-  explicit SO2(const Eigen::Matrix2d& rotation_matrix);
-
-  explicit SO2(const UnitComplex& unit_complex);
-
-  explicit SO2(double angle);
-
-  UnitComplex unit_complex() const;
-
-  double angle() const;
-
-  Eigen::Matrix2d rotation_matrix{Eigen::Matrix2d::Identity()};
-};
-
-SO2 operator+(const SO2& lhs, const SO2& rhs);
-
-Vector<1> operator-(const SO2& lhs, const SO2& rhs);
-
-SO2 SO2_mean_function(const std::array<SO2, 2 * SO2::DOF + 1>& states,
-                      const std::array<double, 2 * SO2::DOF + 1>& weights);
+Vector<Angle::DOF> operator-(const Angle& lhs, const Angle& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
 // SE(2)
 ///////////////////////////////////////////////////////////////////////////////
-struct SE2
+class SE2
 {
+public:
   static constexpr std::size_t DOF = 3;
 
   SE2() = default;
 
-  explicit SE2(const Vector<3>& vec);
+  explicit SE2(const Vector<DOF>& vec);
 
   explicit SE2(const Eigen::Affine2d& affine);
 
-  SE2(const Vector<2>& position, const SO2& rotation);
-
-  SE2(const Vector<2>& position, const UnitComplex& unit_complex);
+  SE2(const Vector<2>& position, const Angle& angle);
 
   SE2(const Vector<2>& position, double angle);
 
-  SE2(const Vector<2>& position, double a, double b);
-
-  SE2(double x, double y, const SO2& rotation);
-
-  SE2(double x, double y, const UnitComplex& unit_complex);
+  SE2(double x, double y, const Angle& angle);
 
   SE2(double x, double y, double angle);
 
-  SE2(double x, double y, double a, double b);
-
+private:
   Eigen::Affine2d affine{Eigen::Affine2d::Identity()};
 };
 
-SE2 operator+(const SE2& lhs, const SE2& rhs);
+SE2 operator+(const SE2& lhs, const Vector<SE2::DOF>& vec);
 
-Vector<3> operator-(const SE2& lhs, const SE2& rhs);
-
-SE2 SE2_mean_function(const std::array<SE2, 2 * SE2::DOF + 1>& states,
-                      const std::array<double, 2 * SE2::DOF + 1>& weights);
+Vector<SE2::DOF> operator-(const SE2& lhs, const SE2& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
 // UnitQuaternion
 ///////////////////////////////////////////////////////////////////////////////
-struct SO3; // forward declaration so UnitQuaternion can use it
-
-struct UnitQuaternion
+class UnitQuaternion
 {
+public:
   static constexpr std::size_t DOF = 3;
 
   UnitQuaternion() = default;
 
-  explicit UnitQuaternion(const Vector<3>& vec);
+  explicit UnitQuaternion(const Vector<DOF>& vec);
 
   explicit UnitQuaternion(const Eigen::Quaterniond& q);
 
-  explicit UnitQuaternion(const SO3& so3);
-
-  explicit UnitQuaternion(const Eigen::Matrix3d& rotation_matrix);
-
   UnitQuaternion(double w, double x, double y, double z);
 
+private:
   Eigen::Quaterniond q{Eigen::Quaterniond::Identity()};
 };
 
-UnitQuaternion operator+(const UnitQuaternion& lhs, const UnitQuaternion& rhs);
+UnitQuaternion operator+(const UnitQuaternion& lhs,
+                         const Vector<UnitQuaternion::DOF>& vec);
 
-Vector<3> operator-(const UnitQuaternion& lhs, const UnitQuaternion& rhs);
-
-UnitQuaternion unit_quaternion_mean_function(
-    const std::array<UnitQuaternion, 2 * UnitQuaternion::DOF + 1>& states,
-    const std::array<double, 2 * UnitQuaternion::DOF + 1>& weights);
-
-///////////////////////////////////////////////////////////////////////////////
-// SO3
-///////////////////////////////////////////////////////////////////////////////
-struct SO3
-{
-  static constexpr std::size_t DOF = 3;
-
-  SO3() = default;
-
-  explicit SO3(const Vector<3>& vec);
-
-  explicit SO3(const Eigen::Matrix3d& rotation_matrix);
-
-  explicit SO3(const UnitQuaternion& q);
-
-  explicit SO3(const Eigen::Quaterniond& q);
-
-  Eigen::Matrix3d rotation_matrix{Eigen::Matrix3d::Identity()};
-};
-
-SO3 operator+(const SO3& lhs, const SO3& rhs);
-
-Vector<3> operator-(const SO3& lhs, const SO3& rhs);
-
-SO3 SO3_mean_function(const std::array<SO3, 2 * SO3::DOF + 1>& states,
-                      const std::array<double, 2 * SO3::DOF + 1>& weights);
+Vector<UnitQuaternion::DOF> operator-(const UnitQuaternion& lhs,
+                                      const UnitQuaternion& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
 // SE(3)
 ///////////////////////////////////////////////////////////////////////////////
-struct SE3
+class SE3
 {
+public:
   static constexpr std::size_t DOF = 6;
 
   SE3() = default;
 
-  explicit SE3(const Vector<6>& vec);
+  explicit SE3(const Vector<DOF>& vec);
 
   explicit SE3(const Eigen::Affine3d& affine);
-
-  SE3(const Vector<3>& position, const SO3& rotation);
 
   SE3(const Vector<3>& position, const UnitQuaternion& q);
 
   SE3(const Vector<3>& position, const Eigen::Quaterniond& q);
 
-  SE3(const Vector<3>& position, const Eigen::Matrix3d& rotation_matrix);
-
-  SE3(double x, double y, double z, const SO3& rotation);
-
   SE3(double x, double y, double z, const UnitQuaternion& q);
 
   SE3(double x, double y, double z, const Eigen::Quaterniond& q);
 
-  SE3(double x, double y, double z, const Eigen::Matrix3d& rotation_matrix);
-
+private:
   Eigen::Affine3d affine{Eigen::Affine3d::Identity()};
 };
 
-SE3 operator+(const SE3& lhs, const SE3& rhs);
+SE3 operator+(const SE3& lhs, const Vector<SE3::DOF>& vec);
 
-Vector<6> operator-(const SE3& lhs, const SE3& rhs);
-
-SE3 SE3_mean_function(const std::array<SE3, 2 * SE3::DOF + 1>& states,
-                      const std::array<double, 2 * SE3::DOF + 1>& weights);
+Vector<SE3::DOF> operator-(const SE3& lhs, const SE3& rhs);
 } // namespace unscented
 
 #endif

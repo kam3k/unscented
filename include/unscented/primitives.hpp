@@ -6,46 +6,48 @@
 namespace unscented
 {
 ///////////////////////////////////////////////////////////////////////////////
-// UnitComplex
+// Angle
 ///////////////////////////////////////////////////////////////////////////////
-UnitComplex::UnitComplex(double angle)
-  : UnitComplex(std::cos(angle), std::sin(angle))
+Angle::Angle(const Vector<Angle::DOF>& vec) : Angle(vec[0])
 {
 }
 
-UnitComplex::UnitComplex(double a_in, double b_in) : a(a_in), b(b_in)
+Angle::Angle(double angle) : Angle(std::cos(angle), std::sin(angle))
+{
+}
+
+Angle::Angle(double cos_angle, double sin_angle)
+  : cos_angle_(cos_angle), sin_angle_(sin_angle)
 {
   static const double EPS = 1e-6;
-  const auto sq_norm = a * a + b * b;
-  if (std::abs(1 - sq_norm) > EPS)
+  const auto sq_norm = cos_angle_ * cos_angle_ + sin_angle_ * sin_angle_;
+  if (std::abs(1.0 - sq_norm) > EPS)
   {
     const auto norm = std::sqrt(sq_norm);
-    a /= norm;
-    b /= norm;
+    cos_angle_ /= norm;
+    sin_angle_ /= norm;
   }
 }
 
-double UnitComplex::angle() const
+double Angle::get_angle() const
 {
-  return std::atan2(b, a);
+  return std::atan2(sin_angle_, cos_angle_);
 }
 
-UnitComplex operator+(const UnitComplex& lhs, double angle)
+Vector<Angle::DOF> Angle::get_vector() const
 {
-  return UnitComplex(lhs.angle() + angle);
+  return Vector<Angle::DOF>{get_angle()};
 }
 
-UnitComplex operator+(const UnitComplex& lhs,
-                      const Vector<UnitComplex::DOF>& vec)
+Angle operator+(const Angle& lhs, const Vector<Angle::DOF>& vec)
 {
-  return lhs + vec(0);
+  return Angle(lhs.get_vector() + vec);
 }
 
-Vector<UnitComplex::DOF> operator-(const UnitComplex& lhs,
-                                   const UnitComplex& rhs)
+Vector<Angle::DOF> operator-(const Angle& lhs, const Angle& rhs)
 {
-  return Vector<UnitComplex::DOF>(
-      UnitComplex(rhs.angle() - lhs.angle()).angle());
+  return Vector<Angle::DOF>(
+      Angle(rhs.get_angle() - lhs.get_angle()).get_angle());
 }
 } // namespace unscented
 

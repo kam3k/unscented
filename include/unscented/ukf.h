@@ -50,55 +50,55 @@ public:
 
   void generate_sigma_points(const N_by_1& delta = N_by_1::Zero());
 
-  void state(const STATE& state);
+  void set_state(const STATE& state);
 
-  void state(STATE&& state);
+  void set_state(STATE&& state);
 
-  const STATE& state() const;
+  const STATE& get_state() const;
 
-  void measurement(const MEAS& measurement);
+  void set_measurement(const MEAS& measurement);
 
-  void measurement(MEAS&& measurement);
+  void set_measurement(MEAS&& measurement);
 
-  const MEAS& measurement() const;
+  const MEAS& get_measurement() const;
 
-  void state_covariance(const N_by_N& state_covariance);
+  void set_state_covariance(const N_by_N& state_covariance);
 
-  void state_covariance(N_by_N&& state_covariance);
+  void set_state_covariance(N_by_N&& state_covariance);
 
-  const N_by_N& state_covariance() const;
+  const N_by_N& get_state_covariance() const;
 
-  void process_covariance(const N_by_N& process_covariance);
+  void set_process_covariance(const N_by_N& process_covariance);
 
-  void process_covariance(N_by_N&& process_covariance);
+  void set_process_covariance(N_by_N&& process_covariance);
 
-  const N_by_N& process_covariance() const;
+  const N_by_N& get_process_covariance() const;
 
-  void measurement_covariance(const M_by_M& measurement_covariance);
+  void set_measurement_covariance(const M_by_M& measurement_covariance);
 
-  void measurement_covariance(M_by_M&& measurement_covariance);
+  void set_measurement_covariance(M_by_M&& measurement_covariance);
 
-  const M_by_M& measurement_covariance() const;
+  const M_by_M& get_measurement_covariance() const;
 
-  const MEAS& expected_measurement() const;
+  const MEAS& get_expected_measurement() const;
 
-  const M_by_M& expected_measurement_covariance() const;
+  const M_by_M& get_expected_measurement_covariance() const;
 
-  const N_by_M& cross_covariance() const;
+  const N_by_M& get_cross_covariance() const;
 
-  const N_by_M& kalman_gain() const;
+  const N_by_M& get_kalman_gain() const;
 
-  const M_by_1& innovation() const;
+  const M_by_1& get_innovation() const;
 
-  const SigmaPoints& sigma_points() const;
+  const SigmaPoints& get_sigma_points() const;
 
-  const MeasurementSigmaPoints& measurement_sigma_points() const;
+  const MeasurementSigmaPoints& get_measurement_sigma_points() const;
 
-  void weight_coefficients(double alpha, double beta, double kappa);
+  void set_weight_coefficients(double alpha, double beta, double kappa);
 
-  const SigmaWeights& mean_sigma_weights() const;
+  const SigmaWeights& get_mean_sigma_weights() const;
 
-  const SigmaWeights& covariance_sigma_weights() const;
+  const SigmaWeights& get_covariance_sigma_weights() const;
 
 private:
   void calculate_weights();
