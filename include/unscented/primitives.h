@@ -5,11 +5,68 @@
 
 namespace unscented
 {
+
 ///////////////////////////////////////////////////////////////////////////////
 // Vectors
 ///////////////////////////////////////////////////////////////////////////////
 template <std::size_t DIM>
 using Vector = Eigen::Matrix<double, DIM, 1>;
+
+///////////////////////////////////////////////////////////////////////////////
+// Scalars
+///////////////////////////////////////////////////////////////////////////////
+struct Scalar
+{
+  Scalar() = default;
+  Scalar(double r); // not explicit on purpose to allow implicit conversion
+  static constexpr std::size_t DOF = 1;
+  double value;
+};
+
+Scalar operator+(const Scalar& lhs, const Vector<Scalar::DOF>& vec);
+
+Vector<Scalar::DOF> operator-(const Scalar& lhs, const Scalar& rhs);
+
+///////////////////////////////////////////////////////////////////////////////
+// Compounds
+///////////////////////////////////////////////////////////////////////////////
+namespace detail
+{
+// Helper to calculate total DOF of the elements of a tuple
+template <typename Tuple, std::size_t... I>
+constexpr std::size_t total_dof_impl(std::index_sequence<I...>);
+
+template <typename Tuple>
+constexpr std::size_t total_dof();
+
+// Apply the addition of a vector to a state tuple
+template <typename Tuple, std::size_t... I>
+Tuple apply_addition(const Tuple& state,
+                     const unscented::Vector<total_dof<Tuple>()>& vec,
+                     std::index_sequence<I...>);
+
+// Apply the subtraction of two state tuples to get a vector
+template <typename Tuple, std::size_t... I>
+unscented::Vector<total_dof<Tuple>()> apply_subtraction(
+    const Tuple& lhs, const Tuple& rhs, std::index_sequence<I...>);
+} // namespace detail
+
+template <typename... Ts>
+struct Compound
+{
+  using Tuple = std::tuple<Ts...>;
+  static constexpr std::size_t TupleSize = std::tuple_size_v<Tuple>;
+  static constexpr std::size_t DOF = detail::total_dof<Tuple>();
+  Tuple data;
+};
+
+template <typename... Ts>
+Compound<Ts...> operator+(const Compound<Ts...>& state,
+                          const unscented::Vector<Compound<Ts...>::DOF>& vec);
+
+template <typename... Ts>
+unscented::Vector<Compound<Ts...>::DOF> operator-(const Compound<Ts...>& lhs,
+                                                  const Compound<Ts...>& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
 // Angle
@@ -42,36 +99,6 @@ Angle operator+(const Angle& lhs, const Vector<Angle::DOF>& vec);
 Vector<Angle::DOF> operator-(const Angle& lhs, const Angle& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
-// SE(2)
-///////////////////////////////////////////////////////////////////////////////
-class SE2
-{
-public:
-  static constexpr std::size_t DOF = 3;
-
-  SE2() = default;
-
-  explicit SE2(const Vector<DOF>& vec);
-
-  explicit SE2(const Eigen::Affine2d& affine);
-
-  SE2(const Vector<2>& position, const Angle& angle);
-
-  SE2(const Vector<2>& position, double angle);
-
-  SE2(double x, double y, const Angle& angle);
-
-  SE2(double x, double y, double angle);
-
-private:
-  Eigen::Affine2d affine{Eigen::Affine2d::Identity()};
-};
-
-SE2 operator+(const SE2& lhs, const Vector<SE2::DOF>& vec);
-
-Vector<SE2::DOF> operator-(const SE2& lhs, const SE2& rhs);
-
-///////////////////////////////////////////////////////////////////////////////
 // UnitQuaternion
 ///////////////////////////////////////////////////////////////////////////////
 class UnitQuaternion
@@ -98,34 +125,19 @@ Vector<UnitQuaternion::DOF> operator-(const UnitQuaternion& lhs,
                                       const UnitQuaternion& rhs);
 
 ///////////////////////////////////////////////////////////////////////////////
-// SE(3)
+// SE(2) / Pose2d
 ///////////////////////////////////////////////////////////////////////////////
-class SE3
-{
-public:
-  static constexpr std::size_t DOF = 6;
+using SE2 = std::tuple<Vector<2>, Angle>;
+using Pose2d = SE2;
 
-  SE3() = default;
+///////////////////////////////////////////////////////////////////////////////
+// SE(3) / Pose3d
+///////////////////////////////////////////////////////////////////////////////
+using SE3 = std::tuple<Vector<3>, UnitQuaternion>;
+using Pose3d = SE3;
 
-  explicit SE3(const Vector<DOF>& vec);
-
-  explicit SE3(const Eigen::Affine3d& affine);
-
-  SE3(const Vector<3>& position, const UnitQuaternion& q);
-
-  SE3(const Vector<3>& position, const Eigen::Quaterniond& q);
-
-  SE3(double x, double y, double z, const UnitQuaternion& q);
-
-  SE3(double x, double y, double z, const Eigen::Quaterniond& q);
-
-private:
-  Eigen::Affine3d affine{Eigen::Affine3d::Identity()};
-};
-
-SE3 operator+(const SE3& lhs, const Vector<SE3::DOF>& vec);
-
-Vector<SE3::DOF> operator-(const SE3& lhs, const SE3& rhs);
 } // namespace unscented
+
+#include <unscented/primitives.hpp>
 
 #endif

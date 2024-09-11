@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.0)
 
 project(unscented)
 
-# use C++11
-set(CMAKE_CXX_FLAGS "-std=c++11")
+# use C++17
+set(CMAKE_CXX_FLAGS "-std=c++17")
 
 # Find Eigen
 find_package(Eigen3 REQUIRED)

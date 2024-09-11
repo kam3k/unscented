@@ -150,4 +150,6 @@ MANIFOLD calculate_mean_manifold(
     const std::array<double, ARRAY_SIZE>& weights);
 } // namespace unscented
 
+#include <unscented/ukf.hpp>
+
 #endif

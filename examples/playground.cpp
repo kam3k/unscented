@@ -1,8 +1,9 @@
-#include "unscented/primitives.hpp"
-#include "unscented/ukf.hpp"
+#include "unscented/primitives.h"
+#include "unscented/ukf.h"
 
 #include <iostream>
 #include <random>
+#include <utility>
 
 using State = unscented::Vector<4>;
 
@@ -26,34 +27,40 @@ void system_model(State& state, double dt)
   state = F * state;
 }
 
-struct Measurement {
-  static constexpr std::size_t DOF = 2;
-  double range{0.0};
-  unscented::Angle elevation{0.0};
-};
+using Range = unscented::Scalar;
+using Elevation = unscented::Angle;
+using Measurement = unscented::Compound<Range, Elevation>;
+constexpr std::size_t RANGE = 0;
+constexpr std::size_t ELEV = 1;
 
-Measurement operator+(const Measurement& lhs,
-                      const unscented::Vector<Measurement::DOF>& vec)
-{
-  Measurement meas;
-  meas.range = lhs.range + vec[0];
-  meas.elevation = unscented::Angle(lhs.elevation.get_angle() + vec[1]);
-  return meas;
-}
+// struct Measurement {
+//   static constexpr std::size_t DOF = 2;
+//   double range{0.0};
+//   unscented::Angle elevation{0.0};
+// };
 
-unscented::Vector<Measurement::DOF> operator-(const Measurement& lhs,
-                                              const Measurement& rhs)
-{
-  return unscented::Vector<Measurement::DOF>(
-      lhs.range - rhs.range, (lhs.elevation - rhs.elevation)(0));
-}
+// Measurement operator+(const Measurement& lhs,
+//                       const unscented::Vector<Measurement::DOF>& vec)
+// {
+//   Measurement meas;
+//   meas.range = lhs.range + vec[0];
+//   meas.elevation = unscented::Angle(lhs.elevation.get_angle() + vec[1]);
+//   return meas;
+// }
+
+// unscented::Vector<Measurement::DOF> operator-(const Measurement& lhs,
+//                                               const Measurement& rhs)
+// {
+//   return unscented::Vector<Measurement::DOF>(
+//       lhs.range - rhs.range, (lhs.elevation - rhs.elevation)(0));
+// }
 
 Measurement measurement_model(const State& state)
 {
   Measurement meas;
-  meas.range =
-      std::sqrt(std::pow(state[POSITION], 2) + std::pow(state[ALTITUDE], 2));
-  meas.elevation = unscented::Angle(std::atan2(state[ALTITUDE], state[POSITION]));
+  meas.data = {
+      std::sqrt(std::pow(state[POSITION], 2) + std::pow(state[ALTITUDE], 2)),
+      unscented::Angle(std::atan2(state[ALTITUDE], state[POSITION]))};
   return meas;
 }
 
@@ -146,9 +153,13 @@ int main() {
 
     // Simulate a measurement based on the true state
     auto meas = measurement_model(true_state);
-    meas.range += range_noise(gen);
-    meas.elevation =
-        unscented::Angle(meas.elevation.get_angle() + elevation_noise(gen));
+    auto& r = std::get<RANGE>(meas.data);
+    auto& e = std::get<ELEV>(meas.data);
+    r.value += range_noise(gen);
+    e = unscented::Angle(e.get_angle() + elevation_noise(gen));
+    // meas.range += range_noise(gen);
+    // meas.elevation =
+    //     unscented::Angle(meas.elevation.get_angle() + elevation_noise(gen));
 
     // Update the filter estimates
     ukf.predict(system_model, DT);
@@ -161,19 +172,6 @@ int main() {
     const auto& K = ukf.get_kalman_gain();
     const auto& inn = ukf.get_innovation();
     const auto& P = ukf.get_state_covariance();
-    for (const auto& meas : sp) {
-      std::cout << "sp: " << meas.range << " " << meas.elevation.get_angle() << "\n";
-    }
-      std::cout << "y_hat: " << y_hat.range << " " << y_hat.elevation.get_angle() << "\n";
-      std::cout << "P_yy:\n" << P_yy << "\n";
-      std::cout << "P_xy:\n" << P_xy << "\n";
-      std::cout << "K:\n" << K << "\n";
-      std::cout << "inn: " << inn.transpose() << "\n";
-      std::cout << "P:\n" << P << "\n";
-      std::cout << "-------------\n";
-    // if (sim_time > 10.0) {
-    // break;
-    // }
 
     // Record all the current values in the history
     estimated_state_history.push_back(ukf.get_state());
@@ -207,8 +205,26 @@ int main() {
               << true_state[CLIMB_RATE] << "," << est_state[CLIMB_RATE] << ","
               << std::sqrt(est_state_cov(CLIMB_RATE, CLIMB_RATE)) << "\n";
   }
+ return 0;
+ }
 
-  return 0;
+// int main() {
+//   using MState = unscented::Compound<unscented::Vector<2>, unscented::Angle>;
+//   MState t;
+//   t.data =
+//       std::make_tuple(unscented::Vector<2>{-0.1, 0.2}, unscented::Angle{0.2});
+//   std::cout << std::get<0>(t.data).transpose() << " "
+//             << " a: " << std::get<1>(t.data).get_angle() << "\n";
+//   auto x = operator+(t, unscented::Vector<3>{1.0, 2.0, 3.0});
+//   // auto x = t + unscented::Vector<3>{1.0, 2.0, 3.0};
+//   std::cout << std::get<0>(x.data).transpose() << " "
+//             << " a: " << std::get<1>(x.data).get_angle() << "\n";
+//   auto v = x - t;
+//   std::cout << "v: " << v.transpose() << "\n";
+
+// return 0;
+
+// }
 
   // using State = unscented::Vector<2>;
   // using Measurement = unscented::Vector<1>;
@@ -231,4 +247,4 @@ int main() {
 
   // std::cout << ukf.get_state().transpose() << "\n";
   // std::cout << ukf.get_state_covariance() << "\n";
-}
+// }

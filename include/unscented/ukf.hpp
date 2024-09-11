@@ -4,6 +4,7 @@
 #include "unscented/ukf.h"
 
 #include <cassert>
+#include <iostream>
 #include <numeric>
 
 namespace unscented
