@@ -30,30 +30,6 @@ void system_model(State& state, double dt)
 using Range = unscented::Scalar;
 using Elevation = unscented::Angle;
 using Measurement = unscented::Compound<Range, Elevation>;
-constexpr std::size_t RANGE = 0;
-constexpr std::size_t ELEV = 1;
-
-// struct Measurement {
-//   static constexpr std::size_t DOF = 2;
-//   double range{0.0};
-//   unscented::Angle elevation{0.0};
-// };
-
-// Measurement operator+(const Measurement& lhs,
-//                       const unscented::Vector<Measurement::DOF>& vec)
-// {
-//   Measurement meas;
-//   meas.range = lhs.range + vec[0];
-//   meas.elevation = unscented::Angle(lhs.elevation.get_angle() + vec[1]);
-//   return meas;
-// }
-
-// unscented::Vector<Measurement::DOF> operator-(const Measurement& lhs,
-//                                               const Measurement& rhs)
-// {
-//   return unscented::Vector<Measurement::DOF>(
-//       lhs.range - rhs.range, (lhs.elevation - rhs.elevation)(0));
-// }
 
 Measurement measurement_model(const State& state)
 {
@@ -153,13 +129,9 @@ int main() {
 
     // Simulate a measurement based on the true state
     auto meas = measurement_model(true_state);
-    auto& r = std::get<RANGE>(meas.data);
-    auto& e = std::get<ELEV>(meas.data);
+    auto& [r, e] = meas.data;
     r.value += range_noise(gen);
     e = unscented::Angle(e.get_angle() + elevation_noise(gen));
-    // meas.range += range_noise(gen);
-    // meas.elevation =
-    //     unscented::Angle(meas.elevation.get_angle() + elevation_noise(gen));
 
     // Update the filter estimates
     ukf.predict(system_model, DT);
@@ -224,27 +196,4 @@ int main() {
 
 // return 0;
 
-// }
-
-  // using State = unscented::Vector<2>;
-  // using Measurement = unscented::Vector<1>;
-  // using UKF = unscented::UKF<State, Measurement>;
-  // UKF ukf;
-  // State state;
-  // state[0] = 1.0;
-  // state[1] = 2.0;
-  // ukf.set_state(state);
-  // UKF::N_by_N Q;
-  // Q << 0.02, 0.00,
-  //      0.00, 0.01;
-  // ukf.set_process_covariance(Q);
-
-  // ukf.predict(
-  //     [](State& state)
-  //     {
-  //       state[0] = 4.0;
-  //     });
-
-  // std::cout << ukf.get_state().transpose() << "\n";
-  // std::cout << ukf.get_state_covariance() << "\n";
 // }

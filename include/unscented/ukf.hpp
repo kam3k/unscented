@@ -189,8 +189,8 @@ void UKF<STATE, MEAS>::set_state_covariance(N_by_N&& state_covariance)
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::N_by_N& UKF<STATE, MEAS>::get_state_covariance()
-    const
+const typename UKF<STATE, MEAS>::N_by_N&
+UKF<STATE, MEAS>::get_state_covariance() const
 {
   return P_;
 }
@@ -208,8 +208,8 @@ void UKF<STATE, MEAS>::set_process_covariance(N_by_N&& process_covariance)
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::N_by_N& UKF<STATE, MEAS>::get_process_covariance()
-    const
+const typename UKF<STATE, MEAS>::N_by_N&
+UKF<STATE, MEAS>::get_process_covariance() const
 {
   return Q_;
 }
@@ -222,7 +222,8 @@ void UKF<STATE, MEAS>::set_measurement_covariance(
 }
 
 template <typename STATE, typename MEAS>
-void UKF<STATE, MEAS>::set_measurement_covariance(M_by_M&& measurement_covariance)
+void UKF<STATE, MEAS>::set_measurement_covariance(
+    M_by_M&& measurement_covariance)
 {
   R_ = std::move(measurement_covariance);
 }
@@ -248,27 +249,29 @@ UKF<STATE, MEAS>::get_expected_measurement_covariance() const
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::N_by_M& UKF<STATE, MEAS>::get_cross_covariance()
-    const
+const typename UKF<STATE, MEAS>::N_by_M&
+UKF<STATE, MEAS>::get_cross_covariance() const
 {
   return Pxy_;
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::N_by_M& UKF<STATE, MEAS>::get_kalman_gain() const
+const typename UKF<STATE, MEAS>::N_by_M& UKF<STATE, MEAS>::get_kalman_gain()
+    const
 {
   return K_;
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::M_by_1& UKF<STATE, MEAS>::get_innovation() const
+const typename UKF<STATE, MEAS>::M_by_1& UKF<STATE, MEAS>::get_innovation()
+    const
 {
   return innovation_;
 }
 
 template <typename STATE, typename MEAS>
-const typename UKF<STATE, MEAS>::SigmaPoints& UKF<STATE, MEAS>::get_sigma_points()
-    const
+const typename UKF<STATE, MEAS>::SigmaPoints&
+UKF<STATE, MEAS>::get_sigma_points() const
 {
   return sigma_points_;
 }
@@ -282,7 +285,7 @@ UKF<STATE, MEAS>::get_measurement_sigma_points() const
 
 template <typename STATE, typename MEAS>
 void UKF<STATE, MEAS>::set_weight_coefficients(double alpha, double beta,
-                                           double kappa)
+                                               double kappa)
 {
   alpha_ = alpha;
   beta_ = beta;
