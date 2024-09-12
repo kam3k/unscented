@@ -1,9 +1,21 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.14)
 
 project(unscented)
 
 # use C++17
 set(CMAKE_CXX_FLAGS "-std=c++17")
+
+include(FetchContent)
+
+FetchContent_Declare(matplotplusplus
+  GIT_REPOSITORY https://github.com/alandefreitas/matplotplusplus
+  GIT_TAG origin/master)
+
+FetchContent_GetProperties(matplotplusplus)
+if(NOT matplotplusplus_POPULATED)
+    FetchContent_Populate(matplotplusplus)
+    add_subdirectory(${matplotplusplus_SOURCE_DIR} ${matplotplusplus_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
 
 # Find Eigen
 find_package(Eigen3 REQUIRED)
@@ -17,13 +29,8 @@ target_compile_definitions(unscented INTERFACE
   )
 
 # Airplane tracking example
-# add_executable(airplane_tracking examples/airplane_tracking/airplane_tracking.cpp)
-# target_include_directories(airplane_tracking PRIVATE examples/airplane_tracking)
-# target_link_libraries(airplane_tracking unscented)
-# target_compile_definitions(airplane_tracking PRIVATE
-#   EIGEN_MATRIX_PLUGIN="unscented/matrix_plugins.h" 
-#   EIGEN_INITIALIZE_MATRICES_BY_ZERO=1
-#   )
+add_executable(airplane_tracking examples/airplane_tracking/airplane_tracking.cpp)
+target_link_libraries(airplane_tracking PUBLIC unscented matplot)
 
 # Robot localization example
 # add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
