@@ -1,6 +1,7 @@
 #ifndef UNSCENTED_PRIMITIVES_HPP
 #define UNSCENTED_PRIMITIVES_HPP
 
+#include <utility>
 #include "unscented/primitives.h"
 
 namespace unscented

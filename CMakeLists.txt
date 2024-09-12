@@ -29,12 +29,12 @@ target_compile_definitions(unscented INTERFACE
   )
 
 # Airplane tracking example
-add_executable(airplane_tracking examples/airplane_tracking/airplane_tracking.cpp)
+add_executable(airplane_tracking examples/airplane_tracking.cpp)
 target_link_libraries(airplane_tracking PUBLIC unscented matplot)
 
 # Robot localization example
-# add_executable(robot_localization_2d examples/robot_localization_2d.cpp)
-# target_link_libraries(robot_localization_2d unscented)
+add_executable(robot_localization examples/robot_localization.cpp)
+target_link_libraries(robot_localization PUBLIC unscented matplot)
 
 # Tests
 # enable_testing()

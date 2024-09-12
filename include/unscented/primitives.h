@@ -57,6 +57,9 @@ struct Compound
   using Tuple = std::tuple<Ts...>;
   static constexpr std::size_t TupleSize = std::tuple_size_v<Tuple>;
   static constexpr std::size_t DOF = detail::total_dof<Tuple>();
+  Compound() = default;
+  Compound(const Ts&... args) : data(std::make_tuple(args...)) {}
+  Compound(Ts&&... args) : data(std::make_tuple(args...)) {}
   Tuple data;
 };
 
@@ -127,13 +130,13 @@ Vector<UnitQuaternion::DOF> operator-(const UnitQuaternion& lhs,
 ///////////////////////////////////////////////////////////////////////////////
 // SE(2) / Pose2d
 ///////////////////////////////////////////////////////////////////////////////
-using SE2 = std::tuple<Vector<2>, Angle>;
+using SE2 = Compound<Vector<2>, Angle>;
 using Pose2d = SE2;
 
 ///////////////////////////////////////////////////////////////////////////////
 // SE(3) / Pose3d
 ///////////////////////////////////////////////////////////////////////////////
-using SE3 = std::tuple<Vector<3>, UnitQuaternion>;
+using SE3 = Compound<Vector<3>, UnitQuaternion>;
 using Pose3d = SE3;
 
 } // namespace unscented

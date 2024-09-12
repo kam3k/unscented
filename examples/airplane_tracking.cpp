@@ -50,11 +50,11 @@ using Measurement = unscented::Compound<Range, Elevation>;
 
 Measurement measurement_model(const State& state)
 {
-  Measurement meas;
-  meas.data = {
-      std::sqrt(std::pow(state[POSITION], 2) + std::pow(state[ALTITUDE], 2)),
-      unscented::Angle(std::atan2(state[ALTITUDE], state[POSITION]))};
-  return meas;
+  const auto expected_range = 
+      std::sqrt(std::pow(state[POSITION], 2) + std::pow(state[ALTITUDE], 2));
+  const auto expected_elevation = 
+      unscented::Angle(std::atan2(state[ALTITUDE], state[POSITION]));
+  return {expected_range, expected_elevation};
 }
 
 int main()
@@ -147,9 +147,9 @@ int main()
 
     // Simulate a measurement based on the true state
     auto meas = measurement_model(true_state);
-    auto& [r, e] = meas.data;
-    r.value += range_noise(gen);
-    e = unscented::Angle(e.get_angle() + elevation_noise(gen));
+    auto& [range, elevation] = meas.data;
+    range.value += range_noise(gen);
+    elevation = unscented::Angle(elevation.get_angle() + elevation_noise(gen));
 
     // Update the filter estimates
     ukf.predict(system_model, DT);
@@ -184,35 +184,35 @@ int main()
   // Plot the results
   //////////////////////////////////////////////////////////////////////////////
 
-  // Create +/- 2 std dev vectors
+  // Create +/- n std dev vectors
   const auto num_std_devs = 2;
   const auto num_pts = position_std_devs.size();
-  std::vector<double> position_plus_2_std_devs(num_pts);
-  std::vector<double> position_minus_2_std_devs(num_pts);
-  std::vector<double> velocity_plus_2_std_devs(num_pts);
-  std::vector<double> velocity_minus_2_std_devs(num_pts);
-  std::vector<double> altitude_plus_2_std_devs(num_pts);
-  std::vector<double> altitude_minus_2_std_devs(num_pts);
-  std::vector<double> climb_rate_plus_2_std_devs(num_pts);
-  std::vector<double> climb_rate_minus_2_std_devs(num_pts);
+  std::vector<double> position_positive_n_std_devs(num_pts);
+  std::vector<double> position_negative_n_std_devs(num_pts);
+  std::vector<double> velocity_positive_n_std_devs(num_pts);
+  std::vector<double> velocity_negative_n_std_devs(num_pts);
+  std::vector<double> altitude_positive_n_std_devs(num_pts);
+  std::vector<double> altitude_negative_n_std_devs(num_pts);
+  std::vector<double> climb_rate_positive_n_std_devs(num_pts);
+  std::vector<double> climb_rate_negative_n_std_devs(num_pts);
   for (std::size_t i = 0; i < num_pts; ++i)
   {
-    position_plus_2_std_devs[i] = num_std_devs * position_std_devs[i];
-    position_minus_2_std_devs[i] = -num_std_devs * position_std_devs[i];
-    velocity_plus_2_std_devs[i] = num_std_devs * velocity_std_devs[i];
-    velocity_minus_2_std_devs[i] = -num_std_devs * velocity_std_devs[i];
-    altitude_plus_2_std_devs[i] = num_std_devs * altitude_std_devs[i];
-    altitude_minus_2_std_devs[i] = -num_std_devs * altitude_std_devs[i];
-    climb_rate_plus_2_std_devs[i] = num_std_devs * climb_rate_std_devs[i];
-    climb_rate_minus_2_std_devs[i] = -num_std_devs * climb_rate_std_devs[i];
+    position_positive_n_std_devs[i] = num_std_devs * position_std_devs[i];
+    position_negative_n_std_devs[i] = -num_std_devs * position_std_devs[i];
+    velocity_positive_n_std_devs[i] = num_std_devs * velocity_std_devs[i];
+    velocity_negative_n_std_devs[i] = -num_std_devs * velocity_std_devs[i];
+    altitude_positive_n_std_devs[i] = num_std_devs * altitude_std_devs[i];
+    altitude_negative_n_std_devs[i] = -num_std_devs * altitude_std_devs[i];
+    climb_rate_positive_n_std_devs[i] = num_std_devs * climb_rate_std_devs[i];
+    climb_rate_negative_n_std_devs[i] = -num_std_devs * climb_rate_std_devs[i];
   }
 
   // Position errors
   matplot::figure();
   matplot::plot(sim_time_history, position_errors, "b");
   matplot::hold(true);
-  matplot::plot(sim_time_history, position_plus_2_std_devs, "r--");
-  matplot::plot(sim_time_history, position_minus_2_std_devs, "r--");
+  matplot::plot(sim_time_history, position_positive_n_std_devs, "r--");
+  matplot::plot(sim_time_history, position_negative_n_std_devs, "r--");
   matplot::title("Position Error");
   matplot::xlabel("Time (s)");
   matplot::ylabel("Error (m)");
@@ -221,8 +221,8 @@ int main()
   matplot::figure();
   matplot::plot(sim_time_history, velocity_errors, "b");
   matplot::hold(true);
-  matplot::plot(sim_time_history, velocity_plus_2_std_devs, "r--");
-  matplot::plot(sim_time_history, velocity_minus_2_std_devs, "r--");
+  matplot::plot(sim_time_history, velocity_positive_n_std_devs, "r--");
+  matplot::plot(sim_time_history, velocity_negative_n_std_devs, "r--");
   matplot::title("Velocity Error");
   matplot::xlabel("Time (s)");
   matplot::ylabel("Error (m/s)");
@@ -231,8 +231,8 @@ int main()
   matplot::figure();
   matplot::plot(sim_time_history, altitude_errors, "b");
   matplot::hold(true);
-  matplot::plot(sim_time_history, altitude_plus_2_std_devs, "r--");
-  matplot::plot(sim_time_history, altitude_minus_2_std_devs, "r--");
+  matplot::plot(sim_time_history, altitude_positive_n_std_devs, "r--");
+  matplot::plot(sim_time_history, altitude_negative_n_std_devs, "r--");
   matplot::title("Altitude Error");
   matplot::xlabel("Time (s)");
   matplot::ylabel("Error (m)");
@@ -241,8 +241,8 @@ int main()
   matplot::figure();
   matplot::plot(sim_time_history, climb_rate_errors, "b");
   matplot::hold(true);
-  matplot::plot(sim_time_history, climb_rate_plus_2_std_devs, "r--");
-  matplot::plot(sim_time_history, climb_rate_minus_2_std_devs, "r--");
+  matplot::plot(sim_time_history, climb_rate_positive_n_std_devs, "r--");
+  matplot::plot(sim_time_history, climb_rate_negative_n_std_devs, "r--");
   matplot::title("Climb Rate Error");
   matplot::xlabel("Time (m/s)");
   matplot::ylabel("Error (m)");
