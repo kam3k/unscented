@@ -1,17 +1,37 @@
 #include "unscented/primitives.h"
 #include "unscented/ukf.hpp"
 
+#include <matplot/matplot.h>
 #include <iostream>
 #include <random>
-#include <matplot/matplot.h>
 
 using State = unscented::Pose2d;
 
-void system_model(State& state, double velocity, double angular_velocity, double dt) {
+void system_model(State& state, double velocity, double steering_angle,
+                  double wheelbase, double dt)
+{
   auto& [position, heading] = state.data;
-  position.x() += velocity * std::cos(heading.get_angle()) * dt;
-  position.y() += velocity * std::sin(heading.get_angle()) * dt;
-  heading = unscented::Angle(heading.get_angle() + angular_velocity * dt);
+  const auto dist = velocity * dt;
+
+  // If the robot is not turning, do simple forward motion
+  const auto is_robot_turning = std::abs(steering_angle) > 0.001;
+  if (!is_robot_turning)
+  {
+    position.x() += dist * std::cos(heading.get_angle());
+    position.y() += dist * std::sin(heading.get_angle());
+    return;
+  }
+
+  // Robot is turning
+  const auto beta = (dist / wheelbase) * std::tan(steering_angle);
+  const auto r = wheelbase / std::tan(steering_angle); // turning radius
+  const auto sinh = std::sin(heading.get_angle());
+  const auto sinhb = std::sin(heading.get_angle() + beta);
+  const auto cosh = std::cos(heading.get_angle());
+  const auto coshb = std::cos(heading.get_angle() + beta);
+  position.x() += -r * sinh + r * sinhb;
+  position.y() += r * cosh - r * coshb;
+  heading = unscented::Angle(heading.get_angle() + beta);
 }
 
 using Measurement = unscented::Compound<unscented::Scalar, unscented::Angle>;
@@ -24,9 +44,7 @@ Measurement measurement_model(const State& state,
   const auto expected_range = relative_position.norm();
   const auto expected_bearing = unscented::Angle(
       std::atan2(relative_position.y(), relative_position.x()));
-  Measurement expected_measurement;
-  expected_measurement.data = {expected_range, expected_bearing};
-  return expected_measurement;
+  return {expected_range, expected_bearing};
 }
 
 int main()
@@ -34,145 +52,127 @@ int main()
   using UKF = unscented::UKF<State, Measurement>;
 
   // Set up the simulation
-  const auto SIM_DURATION = 10.0; // total simulation duration
-  const auto DT = 0.02; // time between prediction steps (i.e., input period)
-  const auto MEAS_PERIOD = 0.1; // time between measurements
-  const std::size_t NUM_LANDMARKS = 4; // total number of landmarks
-  const std::array<Eigen::Vector2d, NUM_LANDMARKS> LANDMARKS = {
-      {{1.0, 4.0},
-       {2.0, 0.5},
-       {2.5, 3.5},
-       {4.0, 2.0}}}; // positions of landmarks
-  const auto VEL_STD_DEV = 0.1;
-  const auto ANG_VEL_STD_DEV = 0.071;
-  State state_true{unscented::Vector<2>(1.0, 1.0), unscented::Angle(0.0)};
+  const auto DT = 0.1; // s (i.e., input period)
+  const auto WHEELBASE = 0.5; // m
+  const auto VEL_STD_DEV = 0.1; // m/s
+  const auto STEERING_ANGLE_STD_DEV = M_PI / 180.0; // rad
+  const auto RANGE_STD_DEV = 0.3; // m
+  const auto BEARING_STD_DEV = 0.1; // rad
+  const std::size_t NUM_LANDMARKS = 3; // total number of landmarks
+  const std::array<unscented::Vector<2>, NUM_LANDMARKS> LANDMARKS = {
+      {{5.0, 10.0}, {10.0, 5.0}, {15.0, 15.0}}}; // positions of landmarks
+  State state_true{unscented::Vector<2>(2.0, 6.0), unscented::Angle(0.3)};
 
   // Setup the UKF (initial state, state covariance, system covariance,
   // measurement covariance)
   UKF ukf;
-  UKF::State state_init(unscented::Vector<2>(1.1, 0.9),
-                        unscented::Angle(M_PI / 12));
+  UKF::State state_init(unscented::Vector<2>(2.1, 5.8), unscented::Angle(0.25));
   ukf.set_state(state_init);
-  UKF::N_by_N P_init;
-  P_init << 0.500, 0.000, 0.000, 0.000, 0.500, 0.000, 0.000, 0.000, 0.250;
-  ukf.set_state_covariance(P_init);
+  // clang-format off
+  UKF::N_by_N P;
+  P << 0.100, 0.000, 0.000, 
+       0.000, 0.100, 0.000, 
+       0.000, 0.000, 0.050;
   UKF::N_by_N Q;
-  Q << 0.002, 0.000, 0.000, 0.000, 0.002, 0.000, 0.000, 0.000, 0.002;
-  ukf.set_process_covariance(Q);
+  Q << 0.0001, 0.0000, 0.0000, 
+       0.0000, 0.0001, 0.0000, 
+       0.0000, 0.0000, 0.0001;
   UKF::M_by_M R;
-  R << 0.063, 0.000, 0.000, 0.007;
+  const auto r_var = RANGE_STD_DEV * RANGE_STD_DEV;
+  const auto b_var = BEARING_STD_DEV * BEARING_STD_DEV;
+  R << r_var, 0.000,
+       0.000, b_var;
+  // clang-format on
+  ukf.set_state_covariance(P);
+  ukf.set_process_covariance(Q);
   ukf.set_measurement_covariance(R);
 
   // Set up random number generation
   std::random_device rd{};
   std::mt19937 gen{rd()};
   std::normal_distribution<double> vel_noise(0.0, VEL_STD_DEV);
-  std::normal_distribution<double> ang_vel_noise(0.0, ANG_VEL_STD_DEV);
-  std::normal_distribution<double> range_noise(0.0, std::sqrt(R(0, 0)));
-  std::normal_distribution<double> bearing_noise(0.0, std::sqrt(R(1, 1)));
+  std::normal_distribution<double> steer_noise(0.0, STEERING_ANGLE_STD_DEV);
+  std::normal_distribution<double> range_noise(0.0, RANGE_STD_DEV);
+  std::normal_distribution<double> bearing_noise(0.0, BEARING_STD_DEV);
 
   // Set up vectors to store the results for plotting
-  std::vector<double> sim_times;
-  std::vector<double> x_true;
-  std::vector<double> y_true;
-  std::vector<double> x_est;
-  std::vector<double> y_est;
-  std::vector<double> x_position_errors;
-  std::vector<double> y_position_errors;
-  std::vector<double> heading_errors;
-  std::vector<double> x_position_std_devs;
-  std::vector<double> y_position_std_devs;
-  std::vector<double> heading_std_devs;
+  std::vector<State> est_states;
+  std::vector<State> true_states;
+  std::vector<UKF::N_by_N> covs;
+
+  // Set up the commands
+  std::vector<double> velocities(200, 1.1);
+  std::vector<double> steering_angles(200, 0.01);
 
   // Run the simulation
-  double sim_time = 0.0;
-  double last_meas_time = 0.0;
-  while (sim_time < SIM_DURATION)
+  for (std::size_t i = 0; i < velocities.size(); ++i)
   {
-    // Get the simulated (true) inputs
-    const auto velocity = 0.5;
-    const auto angular_velocity = 0.01;
+    const auto& v = velocities[i];
+    const auto& steering_angle = steering_angles[i];
 
-    // Move the true state forward in time
-    system_model(state_true, velocity, angular_velocity, DT);
+    // Update true state
+    system_model(state_true, v, steering_angle, WHEELBASE, DT);
 
-    // Get the noisy inputs by perturbing the true inputs
-    const auto velocity_noisy = velocity + vel_noise(gen);
-    const auto angular_velocity_noisy = angular_velocity + ang_vel_noise(gen);
+    // Get a velocity and steering angle
+    const auto v_noisy = v + vel_noise(gen);
+    const auto steer_noisy = steering_angle + steer_noise(gen);
 
-    // Predict the estimated state forward in time
-    ukf.predict(system_model, velocity_noisy, angular_velocity_noisy, DT);
+    // Predict
+    ukf.predict(system_model, v_noisy, steer_noisy, WHEELBASE, DT);
 
-    // Check if it is time for a measurent
-    if (sim_time - last_meas_time >= MEAS_PERIOD)
+    // Correct
+    for (const auto& landmark : LANDMARKS)
     {
-      for (const auto& landmark : LANDMARKS)
-      {
-        // Get the simulated (true) measurement
-        const auto& measurement = measurement_model(state_true, landmark);
-        const auto& [range, bearing] = measurement.data;
+      // Get a noisy measurement by perturbing the true measurement
+      const auto& measurement = measurement_model(state_true, landmark);
+      const auto& [range, bearing] = measurement.data;
+      Measurement measurement_noisy(
+          unscented::Scalar(range.value + range_noise(gen)),
+          unscented::Angle(bearing.get_angle() + bearing_noise(gen)));
 
-        // Get the noisy measurement by perturbing the true measurement
-        Measurement measurement_noisy(
-            unscented::Scalar(range.value + range_noise(gen)),
-            unscented::Angle(bearing.get_angle() + bearing_noise(gen)));
-
-        // Correct the estimated state
-        ukf.correct(measurement_model, measurement_noisy, landmark);
-      }
-      last_meas_time = sim_time;
+      // Correct with the noisy measurement
+      ukf.correct(measurement_model, measurement_noisy, landmark);
     }
 
     // Record results for this iteration
-    const auto& [true_position, true_heading] = state_true.data;
-    const auto& [est_position, est_heading] = ukf.get_state().data;
-    const auto& P = ukf.get_state_covariance();
-    sim_times.push_back(sim_time);
-    x_true.push_back(true_position.x());
-    y_true.push_back(true_position.y());
-    x_est.push_back(est_position.x());
-    y_est.push_back(est_position.y());
-    x_position_errors.push_back(est_position.x() - true_position.x());
-    y_position_errors.push_back(est_position.y() - true_position.y());
-    heading_errors.push_back(unscented::Angle(est_heading - true_heading).get_angle());
-    x_position_std_devs.push_back(std::sqrt(P(0, 0)));
-    y_position_std_devs.push_back(std::sqrt(P(1, 1)));
-    heading_std_devs.push_back(std::sqrt(P(2, 2)));
-
-    // Move the simulation time forward
-    sim_time += DT;
+    true_states.push_back(state_true);
+    est_states.push_back(ukf.get_state());
+    covs.push_back(ukf.get_state_covariance());
   }
 
   //////////////////////////////////////////////////////////////////////////////
   // Plot the results
   //////////////////////////////////////////////////////////////////////////////
 
-  // Create +/- n std dev vectors
-  const auto num_std_devs = 2;
-  const auto num_pts = x_position_std_devs.size();
-  std::vector<double> x_position_positive_n_std_devs(num_pts);
-  std::vector<double> x_position_negative_n_std_devs(num_pts);
-  std::vector<double> y_position_positive_n_std_devs(num_pts);
-  std::vector<double> y_position_negative_n_std_devs(num_pts);
-  std::vector<double> heading_positive_n_std_devs(num_pts);
-  std::vector<double> heading_negative_n_std_devs(num_pts);
-  for (std::size_t i = 0; i < num_pts; ++i)
-  {
-    x_position_positive_n_std_devs[i] = num_std_devs * x_position_std_devs[i];
-    x_position_negative_n_std_devs[i] = -num_std_devs * x_position_std_devs[i];
-    y_position_positive_n_std_devs[i] = num_std_devs * y_position_std_devs[i];
-    y_position_negative_n_std_devs[i] = -num_std_devs * y_position_std_devs[i];
-    heading_positive_n_std_devs[i] = num_std_devs * heading_std_devs[i];
-    heading_negative_n_std_devs[i] = -num_std_devs * heading_std_devs[i];
+  // Get the estimated x-y trajectory
+  std::vector<double> xs_est;
+  std::vector<double> ys_est;
+  for (const auto& state : est_states) {
+    const auto& [pos, head] = state.data;
+    xs_est.push_back(pos.x());
+    ys_est.push_back(pos.y());
   }
 
-  // Trajectories
+  // Get the true x-y trajectory
+  std::vector<double> xs_true;
+  std::vector<double> ys_true;
+  for (const auto& state : true_states) {
+    const auto& [pos, head] = state.data;
+    xs_true.push_back(pos.x());
+    ys_true.push_back(pos.y());
+  }
+
   matplot::figure();
-  matplot::plot(x_true, y_true, "b");
+  matplot::plot(xs_true, ys_true, "k");
   matplot::hold(true);
-  matplot::plot(x_est, y_est, "r");
-  matplot::axis(matplot::equal);
+  matplot::plot(xs_est, ys_est, "b");
+  matplot::title("Trajectory");
+  matplot::xlabel("x (m)");
+  matplot::ylabel("y (m)");
+  matplot::axis("equal");
 
   matplot::show();
+
+  return 0;
 }
 
