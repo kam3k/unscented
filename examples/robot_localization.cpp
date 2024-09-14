@@ -1,7 +1,9 @@
+#include "matplot/freestanding/plot.h"
 #include "unscented/primitives.h"
 #include "unscented/ukf.hpp"
 
 #include <matplot/matplot.h>
+#include <cstddef>
 #include <iostream>
 #include <random>
 
@@ -58,9 +60,13 @@ int main()
   const auto STEERING_ANGLE_STD_DEV = M_PI / 180.0; // rad
   const auto RANGE_STD_DEV = 0.3; // m
   const auto BEARING_STD_DEV = 0.1; // rad
-  const std::size_t NUM_LANDMARKS = 3; // total number of landmarks
+  const auto MAX_MEAS_RANGE = 10.0;
+  const std::size_t NUM_LANDMARKS = 4; // total number of landmarks
   const std::array<unscented::Vector<2>, NUM_LANDMARKS> LANDMARKS = {
-      {{5.0, 10.0}, {10.0, 5.0}, {15.0, 15.0}}}; // positions of landmarks
+      {{5.0, 10.0},
+       {10.0, 5.0},
+       {30.0, 25.0},
+       {60.0, 45.0}}}; // positions of landmarks
   State state_true{unscented::Vector<2>(2.0, 6.0), unscented::Angle(0.3)};
 
   // Setup the UKF (initial state, state covariance, system covariance,
@@ -101,14 +107,32 @@ int main()
   std::vector<UKF::N_by_N> covs;
 
   // Set up the commands
-  std::vector<double> velocities(200, 1.1);
+  std::vector<double> velocities(500, 1.1);
   std::vector<double> steering_angles(200, 0.01);
 
   // Run the simulation
-  for (std::size_t i = 0; i < velocities.size(); ++i)
+  const std::size_t NUM_STEPS = 750;
+  for (std::size_t i = 0; i < NUM_STEPS; ++i)
   {
-    const auto& v = velocities[i];
-    const auto& steering_angle = steering_angles[i];
+    // Generate a velocity and steering angle
+    const auto v = 1.1;
+    auto steering_angle = 0.02;
+    if (i > 200)
+    {
+      steering_angle = -0.02;
+    }
+    if (i > 400)
+    {
+      steering_angle = 0.04;
+    }
+    if (i > 450)
+    {
+      steering_angle = -0.03;
+    }
+    if (i > 600)
+    {
+      steering_angle = 0.04;
+    }
 
     // Update true state
     system_model(state_true, v, steering_angle, WHEELBASE, DT);
@@ -123,9 +147,16 @@ int main()
     // Correct
     for (const auto& landmark : LANDMARKS)
     {
-      // Get a noisy measurement by perturbing the true measurement
+      // Get the measurement 
       const auto& measurement = measurement_model(state_true, landmark);
       const auto& [range, bearing] = measurement.data;
+
+      // Only use the measurement if the landmark is within range of the robot
+      if (range.value > MAX_MEAS_RANGE) {
+        continue;
+      }
+
+      // Generate a noisy measurement by perturbing the true one
       Measurement measurement_noisy(
           unscented::Scalar(range.value + range_noise(gen)),
           unscented::Angle(bearing.get_angle() + bearing_noise(gen)));
@@ -167,6 +198,12 @@ int main()
   matplot::hold(true);
   matplot::plot(xs_est, ys_est, "b");
   matplot::title("Trajectory");
+  for (const auto& landmark : LANDMARKS) {
+    auto rect =
+        matplot::rectangle(landmark.x() - 0.5, landmark.y() - 0.5, 1.0, 1.0);
+    rect->fill(true);
+    rect->color({0.8f, 0.f, 0.f, 1.f});
+  }
   matplot::xlabel("x (m)");
   matplot::ylabel("y (m)");
   matplot::axis("equal");
