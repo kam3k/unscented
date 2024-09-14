@@ -63,11 +63,10 @@ int main()
   // Set up the filter
   //////////////////////////////////////////////////////////////////////////////
 
-  // The airplane state has four degrees of freedom (position, velocity,
-  // altitude, climb rate) and the radar measurement has two degrees of freedom
-  // (range, elevation)
+  // Initialize the UKF and set the weights
   using UKF = unscented::UKF<State, Measurement>;
   UKF ukf;
+  ukf.set_weight_coefficients(0.1, 2.0, -1.0);
 
   // Simulation parameters
   const auto SIM_DURATION = 360.0; // seconds
@@ -77,7 +76,7 @@ int main()
   // noise model (Bar-Shalom. “Estimation with Applications To Tracking and
   // Navigation”. John Wiley & Sons, 2001. Page 274.). To simplify, one can
   // simply pick (or tune) appropriate values on the diagonal of Q.
-  const auto PROCESS_VAR = 100;
+  const auto PROCESS_VAR = 0.1;
   unscented::Vector<2> G(0.5 * DT * DT, DT);
   UKF::N_by_N Q;
   Q.block<2, 2>(0, 0) = G * G.transpose() * PROCESS_VAR;
@@ -107,8 +106,16 @@ int main()
   // Set up the simulation
   //////////////////////////////////////////////////////////////////////////////
 
-  // Create vectors to store the state errors and standard deviations over time
-  // to be used for plotting at the end of the simulation
+  // Create vectors to store the state and state errors and standard deviations
+  // over time to be used for plotting at the end of the simulation
+  std::vector<double> true_positions;
+  std::vector<double> true_velocities;
+  std::vector<double> true_altitudes;
+  std::vector<double> true_climb_rates;
+  std::vector<double> est_positions;
+  std::vector<double> est_velocities;
+  std::vector<double> est_altitudes;
+  std::vector<double> est_climb_rates;
   std::vector<double> position_errors;
   std::vector<double> velocity_errors;
   std::vector<double> altitude_errors;
@@ -121,7 +128,7 @@ int main()
   // Setup random number generation
   std::random_device rd{};
   std::mt19937 gen{rd()};
-  std::normal_distribution<double> vel_noise(0.0, 10.0);
+  std::normal_distribution<double> vel_noise(0.0, 0.02);
   std::normal_distribution<double> range_noise(0.0, RANGE_STD_DEV);
   std::normal_distribution<double> elevation_noise(0.0, ELEVATION_STD_DEV);
 
@@ -165,6 +172,14 @@ int main()
 
     // Record all the current estimated values in the history
     const auto& est_state = ukf.get_state();
+    true_positions.push_back(true_state[POSITION]);
+    true_velocities.push_back(true_state[VELOCITY]);
+    true_altitudes.push_back(true_state[ALTITUDE]);
+    true_climb_rates.push_back(true_state[CLIMB_RATE]);
+    est_positions.push_back(est_state[POSITION]);
+    est_velocities.push_back(est_state[VELOCITY]);
+    est_altitudes.push_back(est_state[ALTITUDE]);
+    est_climb_rates.push_back(est_state[CLIMB_RATE]);
     position_errors.push_back(est_state[POSITION] - true_state[POSITION]);
     velocity_errors.push_back(est_state[VELOCITY] - true_state[VELOCITY]);
     altitude_errors.push_back(est_state[ALTITUDE] - true_state[ALTITUDE]);
@@ -206,6 +221,42 @@ int main()
     climb_rate_positive_n_std_devs[i] = num_std_devs * climb_rate_std_devs[i];
     climb_rate_negative_n_std_devs[i] = -num_std_devs * climb_rate_std_devs[i];
   }
+  
+  // Position
+  matplot::figure();
+  matplot::plot(sim_time_history, true_positions, "k");
+  matplot::hold(true);
+  matplot::plot(sim_time_history, est_positions, "b");
+  matplot::title("Position");
+  matplot::xlabel("Time (s)");
+  matplot::ylabel("Position (m)");
+  
+  // Velocity
+  matplot::figure();
+  matplot::plot(sim_time_history, true_velocities, "k");
+  matplot::hold(true);
+  matplot::plot(sim_time_history, est_velocities, "b");
+  matplot::title("Velocity");
+  matplot::xlabel("Time (s)");
+  matplot::ylabel("Velocities (m/s)");
+  
+  // Altitude
+  matplot::figure();
+  matplot::plot(sim_time_history, true_altitudes, "k");
+  matplot::hold(true);
+  matplot::plot(sim_time_history, est_altitudes, "b");
+  matplot::title("Altitude");
+  matplot::xlabel("Time (s)");
+  matplot::ylabel("Altitude (m)");
+  
+  // Climb rate
+  matplot::figure();
+  matplot::plot(sim_time_history, true_climb_rates, "k");
+  matplot::hold(true);
+  matplot::plot(sim_time_history, est_climb_rates, "b");
+  matplot::title("Climb rate");
+  matplot::xlabel("Time (s)");
+  matplot::ylabel("Climb rate (m/s)");
 
   // Position errors
   matplot::figure();

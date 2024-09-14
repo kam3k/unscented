@@ -135,7 +135,7 @@ private:
 
   double beta_ = 2.0;
 
-  double kappa_ = 0.0;
+  double kappa_ = 3.0 - static_cast<double>(N);
 
   double lambda_;
 
