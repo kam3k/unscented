@@ -202,7 +202,7 @@ int main()
     auto rect =
         matplot::rectangle(landmark.x() - 0.5, landmark.y() - 0.5, 1.0, 1.0);
     rect->fill(true);
-    rect->color({0.8f, 0.f, 0.f, 1.f});
+    rect->color("red");
   }
   matplot::xlabel("x (m)");
   matplot::ylabel("y (m)");
