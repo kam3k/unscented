@@ -6,7 +6,7 @@ A flexible and powerful unscented Kalman filter library (C++17 or later) that ma
 
 ## Table of contents
 * [What is an unscented Kalman filter?](#what-is-an-unscented-kalman-filter)
-* [Quickstart](#quickstart)
+* [Showcase](#showcase)
 * [Features](#features)
 * [Installation](#installation)
 * [Documentation](#documentation)
@@ -23,7 +23,7 @@ A flexible and powerful unscented Kalman filter library (C++17 or later) that ma
 
 ## What is an unscented Kalman filter?
 
-A Kalman filter (KF) is an algorithm that takes a series of measurements over time (e.g., positions, temperatures, distances, pressures, velocities, etc.) and produces estimates of an evolving unknown state (e.g., the position and heading of a vehicle) with accuracy better than each individual measurement. It accomplishes this by modelling the uncertainty of all concerned variables (e.g., the noise in sensor measurements) and combining them in such a way that optimises the resulting estimates of the state.
+A Kalman filter (KF) is an algorithm that takes a series of measurements over time (e.g., positions, temperatures, distances, pressures, velocities, etc.) and produces estimates of an unknown state (e.g., the position and heading of a vehicle) with accuracy better than each individual measurement. It accomplishes this by modelling the uncertainty of all concerned variables (e.g., the noise in sensor measurements) and combining them in such a way that optimises the resulting estimates of the state.
 
 For example, a KF is well-suited for estimating the state of a car (e.g., its position, speed, turning rate, etc.) by combining measurements from a GPS device, the car's speedometer and steering angle, and a model of how a car moves (e.g., cars do not tend to move laterally, rather they move in the direction their wheels are facing). Combining these elements in a KF provides a better estimate of the car's state than any of the individual measurements.
 
