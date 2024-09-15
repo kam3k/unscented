@@ -1,4 +1,3 @@
-![unscented](media/unscented.png)
 <p align="center">
   <img src="media/unscented.png" />
 </p>
